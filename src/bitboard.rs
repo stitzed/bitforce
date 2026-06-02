@@ -1,5 +1,6 @@
 use std::ops::*;
 use std::fmt::Display;
+use crate::square::Square;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(transparent)]
@@ -12,18 +13,18 @@ impl Bitboard {
     }
     
     #[inline(always)]
-    pub fn set_bit(&mut self, index: u8) {
-        self.0 |= 1 << index
+    pub fn set_bit(&mut self, square: Square) {
+        self.0 |= square.to_bitboard_mask()
     }
 
     #[inline(always)]
-    pub fn clear_bit(&mut self, index: u8) {
-        self.0 &= !(1 << index)
+    pub fn clear_bit(&mut self, square: Square) {
+        self.0 &= !(square.to_bitboard_mask())
     }
 
     #[inline(always)]
-    pub fn is_bit_setted(&self, index: u8) -> bool {
-        self.0 & (1 << index) != 0
+    pub fn is_bit_setted(&self, square: Square) -> bool {
+        self.0 & (square.to_bitboard_mask()) != 0
     }
 }
 
@@ -84,8 +85,9 @@ impl Display for Bitboard {
         for row in (0..8).rev() {
             for col in 0..8 {
                 let index: u8 = row * 8 + col;
+                let square: Square = Square::new_unchecked(index);
 
-                if self.is_bit_setted(index) {
+                if self.is_bit_setted(square) {
                     write!(f, "X ")?;
                 } else {
                     write!(f, ". ")?;
@@ -96,6 +98,32 @@ impl Display for Bitboard {
         }
         
         Ok(())
+    }
+}
+
+pub struct BitboardIterator(Bitboard);
+
+impl Iterator for BitboardIterator {
+    type Item = Square;
+    
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.0.0 != 0 {
+            let index: u8 = self.0.0.trailing_zeros() as u8;
+            self.0.0 &= self.0.0 - 1;
+
+            Some(Square::new_unchecked(index))
+        } else {
+            None
+        }
+    }
+}
+
+impl IntoIterator for Bitboard {
+    type IntoIter = BitboardIterator;
+    type Item = Square;
+    
+    fn into_iter(self) -> Self::IntoIter {
+        BitboardIterator(self)
     }
 }
 
