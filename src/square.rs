@@ -5,6 +5,8 @@ use std::ops::{Add, Sub};
 pub struct Square(u8);
 
 impl Square {
+    pub const SQUARE_MASK: u8 = 0b111111;
+    
     #[inline(always)]
     pub fn new(index: u8) -> Option<Self> {
         if index > 64 {
@@ -32,6 +34,11 @@ impl Square {
     #[inline(always)]
     pub fn row(&self) -> u8 {
         self.0 >> 3
+    }
+
+    #[inline(always)]
+    pub fn as_u8(&self) -> u8 {
+        self.0
     }
 }
 
