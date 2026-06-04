@@ -1,6 +1,8 @@
 use std::ops::{Add, Sub};
+use derive_more::Into;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Into)]
+#[into(u8, u32)]
 #[repr(transparent)]
 pub struct Square(u8);
 
@@ -8,16 +10,9 @@ impl Square {
     pub const SQUARE_MASK: u8 = 0b111111;
     
     #[inline(always)]
-    pub fn new(index: u8) -> Option<Self> {
-        if index > 64 {
-            return None;
-        }
+    pub const fn new(index: u8) -> Self {
+        assert!(index < 64, "index must be in 0..64 range");
         
-        Some(Self(index))
-    }
-    
-    #[inline(always)]
-    pub const fn new_unchecked(index: u8) -> Self {
         Self(index)
     }
     
@@ -34,11 +29,6 @@ impl Square {
     #[inline(always)]
     pub fn row(&self) -> u8 {
         self.0 >> 3
-    }
-
-    #[inline(always)]
-    pub fn as_u8(&self) -> u8 {
-        self.0
     }
 }
 

@@ -85,7 +85,7 @@ impl Display for Bitboard {
         for row in (0..8).rev() {
             for col in 0..8 {
                 let index: u8 = row * 8 + col;
-                let square: Square = Square::new_unchecked(index);
+                let square: Square = Square::new(index);
 
                 if self.is_bit_setted(square) {
                     write!(f, "X ")?;
@@ -111,7 +111,7 @@ impl Iterator for BitboardIterator {
             let index: u8 = self.0.0.trailing_zeros() as u8;
             self.0.0 &= self.0.0 - 1;
 
-            Some(Square::new_unchecked(index))
+            Some(Square::new(index))
         } else {
             None
         }

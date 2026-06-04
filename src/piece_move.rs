@@ -37,20 +37,20 @@ impl Move {
         bits |= (is_en_passant as u32) << 18;
         bits |= captured_type.map_or(0, |k| k as u32) << 15;
         bits |= promotion_type.map_or(0, |k| k as u32) << 12;
-        bits |= (from_square.as_u8() as u32) << 6;
-        bits |= to_square.as_u8() as u32;
+        bits |= (u32::from(from_square)) << 6;
+        bits |= u32::from(to_square);
 
         Self(bits)
     }
 
     #[inline(always)]
     pub fn from_square(&self) -> Square {
-        Square::new_unchecked(((self.0 >> 6) & Square::SQUARE_MASK as u32) as u8)
+        Square::new(((self.0 >> 6) & Square::SQUARE_MASK as u32) as u8)
     }
     
     #[inline(always)]
     pub fn to_square(&self) -> Square {
-        Square::new_unchecked((self.0 & Square::SQUARE_MASK as u32) as u8)
+        Square::new((self.0 & Square::SQUARE_MASK as u32) as u8)
     }
 
     #[inline(always)]
