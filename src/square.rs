@@ -2,7 +2,7 @@ use std::ops::{Add, Sub};
 use derive_more::Into;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Into)]
-#[into(u8, u32)]
+#[into(u8, u32, usize)]
 #[repr(transparent)]
 pub struct Square(u8);
 

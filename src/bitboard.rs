@@ -2,7 +2,7 @@ use std::ops::*;
 use std::fmt::Display;
 use crate::square::Square;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Default, Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(transparent)]
 pub struct Bitboard(u64);
 
