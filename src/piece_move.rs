@@ -20,6 +20,8 @@ impl CastlingType {
 }
 
 /// [11 free][2 castling_type][1 is_en_passant][3 captured_type][3 promotion_type][6 from][6 to]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[repr(transparent)]
 pub struct Move(u32);
 
 impl Move {

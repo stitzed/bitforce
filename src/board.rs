@@ -1,11 +1,14 @@
 use std::fmt::Display;
 
 use crate::bitboard::Bitboard;
+use crate::buffer::{Buffer, MOVE_HISTORY_BUFFER_LEN};
 use crate::piece::{Color, Kind, Piece};
+use crate::piece_move::Move;
 use crate::square::Square;
 
 pub struct ChessBoard {
     pub current_turn: Color,
+    history_of_moves: Buffer<Move, MOVE_HISTORY_BUFFER_LEN>,
     board: [Option<Piece>; 64],
     /// `[WP, WN, WB, WR, WQ, WK | BP, BN, BB, BR, BQ, BK]`
     bitboards: [Bitboard; 12],
@@ -44,6 +47,7 @@ impl ChessBoard {
         
         Self {
             current_turn: Color::White,
+            history_of_moves: Buffer::new(),
             board,
             bitboards,
             all_white_bitboard,
