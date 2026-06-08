@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use std::ops::{Add, Sub};
 use derive_more::Into;
 
@@ -45,5 +47,12 @@ impl Sub<u8> for Square {
 
     fn sub(self, rhs: u8) -> Self::Output {
         Self(self.0.wrapping_sub(rhs))
+    }
+}
+
+impl Display for Square {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let col_char: char = char::from_u32(('a' as u32) + self.col() as u32).unwrap_or('?');
+        f.write_str(&format!("{}{}", col_char, self.row() + 1))
     }
 }

@@ -1,3 +1,5 @@
+use std::fmt::Debug;
+
 use crate::square::Square;
 use crate::piece::Kind;
 
@@ -20,7 +22,7 @@ impl CastlingType {
 }
 
 /// [11 free][2 castling_type][1 is_en_passant][3 captured_type][3 promotion_type][6 from][6 to]
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, PartialEq, Eq)]
 #[repr(transparent)]
 pub struct Move(u32);
 
@@ -73,5 +75,18 @@ impl Move {
     #[inline(always)]
     pub fn castling_type(&self) -> Option<CastlingType> {
         CastlingType::from_index((self.0 >> 19) as u8)
+    }
+}
+
+impl Debug for Move {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Move")
+            .field("from_square", &format_args!("{}", self.from_square()))
+            .field("to_square", &format_args!("{}", self.to_square()))
+            .field("promotion_type", &self.promotion_type())
+            .field("captured_type", &self.captured_type())
+            .field("is_en_passant", &self.is_en_passant())
+            .field("castling_type", &self.castling_type())
+            .finish()
     }
 }
