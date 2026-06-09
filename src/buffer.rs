@@ -2,6 +2,7 @@ use std::ops::Deref;
 use std::mem::MaybeUninit;
 
 pub const MOVE_HISTORY_BUFFER_LEN: usize = 512;
+pub const MOVE_BUFFER_LEN: usize = 128;
 
 /// A stack-based buffer with fixed capacity for primitives.
 /// 

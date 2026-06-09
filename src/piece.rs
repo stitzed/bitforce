@@ -83,6 +83,14 @@ pub enum Color {
 
 impl Color {
     pub const ALL_COLORS: [Self; 2] = [Self::White, Self::Black];
+
+    #[inline(always)]
+    pub fn to_index(&self) -> usize {
+        match self {
+            Self::White => 0,
+            Self::Black => 1
+        }
+    }
 }
 
 impl Not for Color {

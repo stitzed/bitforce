@@ -19,17 +19,17 @@ impl Square {
     }
     
     #[inline(always)]
-    pub fn to_bitboard_mask(&self) -> u64 {
+    pub const fn to_bitboard_mask(&self) -> u64 {
         1 << self.0
     }
 
     #[inline(always)]
-    pub fn col(&self) -> u8 {
+    pub const fn col(&self) -> u8 {
         self.0 & 7
     }
 
     #[inline(always)]
-    pub fn row(&self) -> u8 {
+    pub const fn row(&self) -> u8 {
         self.0 >> 3
     }
 }
