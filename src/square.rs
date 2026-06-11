@@ -17,6 +17,13 @@ impl Square {
         
         Self(index)
     }
+
+    #[inline(always)]
+    pub const fn from_coords(row: u8, col: u8) -> Self {
+        assert!(row < 8 && col < 8, "coords must be in 0..8 range");
+        
+        Self((row * 8) + col)
+    }
     
     #[inline(always)]
     pub const fn to_bitboard_mask(&self) -> u64 {

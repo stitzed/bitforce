@@ -2,6 +2,45 @@ use std::ops::*;
 use std::fmt::Display;
 use crate::square::Square;
 
+const fn generate_masks(offsets: &[(i8, i8)]) -> [Bitboard; 64] {
+    let mut masks: [Bitboard; 64] = [Bitboard::new(0); 64];
+
+    let mut i: usize = 0;
+
+    while i < 64 {
+        let mut mask: u64 = 0;
+        
+        let sq: Square = Square::new(i as u8);
+        let (row, col) = (sq.row(), sq.col());
+        
+        let mut arr_ptr: usize = 0;
+
+        while arr_ptr < offsets.len() {
+            let piece_offset: (i8, i8) = offsets[arr_ptr];
+            let (delta_row, delta_col) = (row as i8 + piece_offset.0, col as i8 + piece_offset.1);
+
+            if (delta_row >= 0 && delta_row < 8) && (delta_col >= 0 && delta_col < 8) {
+                mask |= Square::from_coords(delta_row as u8, delta_col as u8).to_bitboard_mask()
+            }
+            
+
+            arr_ptr += 1;
+        }
+
+        masks[i] = Bitboard::new(mask);
+        
+        i += 1;
+    }
+
+    masks
+}
+
+const KNIGHT_OFFSETS: [(i8, i8); 8] = [(-2, -1), (-2, 1), (-1, -2), (-1, 2), (1, -2), (1, 2), (2, -1), (2, 1)];
+const KING_OFFSETS: [(i8, i8); 8] = [(-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)];
+
+pub const KNIGHT_MASKS: [Bitboard; 64] = generate_masks(&KNIGHT_OFFSETS);
+pub const KING_MASKS: [Bitboard; 64] = generate_masks(&KING_OFFSETS);
+
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(transparent)]
 pub struct Bitboard(u64);
