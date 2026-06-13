@@ -65,6 +65,16 @@ impl Bitboard {
     pub fn is_bit_setted(&self, square: Square) -> bool {
         self.0 & (square.to_bitboard_mask()) != 0
     }
+
+    #[inline(always)]
+    pub fn is_empty(&self) -> bool {
+        self.0 == 0
+    }
+
+    #[inline(always)]
+    pub fn first_square_unchecked(&self) -> Square {
+        Square::new(self.0.trailing_zeros() as u8)
+    }
 }
 
 impl BitAnd for Bitboard {
@@ -119,6 +129,20 @@ impl Shr<u8> for Bitboard {
     }
 }
 
+impl BitXor for Bitboard {
+    type Output = Self;
+    
+    fn bitxor(self, rhs: Self) -> Self::Output {
+        Self(self.0 ^ rhs.0)
+    }
+}
+
+impl BitXorAssign for Bitboard {
+    fn bitxor_assign(&mut self, rhs: Self) {
+        self.0 ^= rhs.0
+    }
+}
+
 impl Display for Bitboard {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         for row in (0..8).rev() {
@@ -146,11 +170,11 @@ impl Iterator for BitboardIterator {
     type Item = Square;
     
     fn next(&mut self) -> Option<Self::Item> {
-        if self.0.0 != 0 {
-            let index: u8 = self.0.0.trailing_zeros() as u8;
+        if !self.0.is_empty() {
+            let square: Square = self.0.first_square_unchecked();
             self.0.0 &= self.0.0 - 1;
 
-            Some(Square::new(index))
+            Some(square)
         } else {
             None
         }

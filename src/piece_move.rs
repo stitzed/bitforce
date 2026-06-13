@@ -1,25 +1,8 @@
 use std::fmt::Debug;
 
+use crate::castle::CastlingType;
 use crate::square::Square;
 use crate::piece::Kind;
-
-#[derive(Debug, Clone, Copy)]
-#[repr(u8)]
-pub enum CastlingType {
-    Kingside = 1,
-    Queenside = 2
-}
-
-impl CastlingType {
-    pub const ALL_CASTLING_TYPES: [Self; 2] = [Self::Kingside, Self::Queenside];
-    
-    #[inline(always)]
-    pub fn from_index(index: u8) -> Option<Self> {
-        let idx: u8 = index.checked_sub(1)?;
-        
-        Self::ALL_CASTLING_TYPES.get(usize::from(idx)).copied()
-    }
-}
 
 /// [11 free][2 castling_type][1 is_en_passant][3 captured_type][3 promotion_type][6 from][6 to]
 #[derive(Clone, Copy, PartialEq, Eq)]
