@@ -22,8 +22,8 @@ impl Move {
         let mut bits: u32 = (castling_type.map_or(0, |c| c as u32)) << 19;
 
         bits |= (is_en_passant as u32) << 18;
-        bits |= captured_type.map_or(0, |k| k as u32) << 15;
-        bits |= promotion_type.map_or(0, |k| k as u32) << 12;
+        bits |= captured_type.map_or(Kind::NONE_VALUE as u32, |k| k as u32) << 15;
+        bits |= promotion_type.map_or(Kind::NONE_VALUE as u32, |k| k as u32) << 12;
         bits |= (u32::from(from_square)) << 6;
         bits |= u32::from(to_square);
 
