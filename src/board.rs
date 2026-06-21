@@ -1,16 +1,28 @@
 use std::fmt::Display;
+use std::str::FromStr;
 
 use crate::bitboard::{Bitboard, KNIGHT_MASKS, KING_MASKS};
 use crate::buffer::{Buffer, MOVE_HISTORY_BUFFER_LEN, MOVE_BUFFER_LEN};
 use crate::castle::{CastlingType, CastlingFlags};
+use crate::errors::FenParseError;
 use crate::piece::{Color, Kind, Piece};
 use crate::piece_move::Move;
 use crate::square::Square;
+
+const FEN_PIECE_SETUP_IDX: usize = 0;
+const FEN_CURRENT_TURN_IDX: usize = 1;
+const FEN_CASTLING_FLAGS_IDX: usize = 2;
+const FEN_EN_PASSANT_SQUARE_IDX: usize = 3;
+const FEN_FIFTY_MOVE_COUNTER_IDX: usize = 4;
+const FEN_FULLMOVE_NUMBER_IDX: usize = 5;
 
 pub struct ChessBoard {
     pub current_turn: Color,
     history_of_moves: Buffer<Move, MOVE_HISTORY_BUFFER_LEN>,
     castling_flags: CastlingFlags,
+    en_passant_square: Option<Square>,
+    fifty_move_counter: u8,
+    fullmove_number: u16,
     board: [Option<Piece>; 64],
     /// `[WP, WN, WB, WR, WQ, WK | BP, BN, BB, BR, BQ, BK]`
     bitboards: [Bitboard; 12],
@@ -53,11 +65,144 @@ impl ChessBoard {
             current_turn: Color::White,
             history_of_moves: Buffer::new(),
             castling_flags: CastlingFlags::new(true, true, true, true),
+            en_passant_square: None,
+            fifty_move_counter: 0,
+            fullmove_number: 0,
             board,
             bitboards,
             side_bitboards,
             all_pieces_bitboard: all_white_bitboard | all_black_bitboard
         }
+    }
+
+    pub fn from_fen<'a>(fen: &'a str) -> Result<Self, FenParseError<'a>> {
+        let mut board: Self = Self {
+            current_turn: Color::White,
+            history_of_moves: Buffer::new(),
+            castling_flags: CastlingFlags::new(false, false, false, false),
+            en_passant_square: None,
+            fifty_move_counter: 0,
+            fullmove_number: 0,
+            board: [None; 64],
+            bitboards: [Bitboard::default(); 12],
+            side_bitboards: [Bitboard::default(); 2],
+            all_pieces_bitboard: Bitboard::default()
+        };
+
+        let mut total_parts: u8 = 0;
+
+        for (i, part) in fen.split_whitespace().enumerate() {
+            total_parts += 1;
+            
+            match i {
+                FEN_PIECE_SETUP_IDX => {
+                    Self::parse_piece_setup(&mut board, part)?;
+                },
+
+                FEN_CURRENT_TURN_IDX => {
+                    board.current_turn = match part {
+                        "w" => Color::White,
+                        "b" => Color::Black,
+                        _ => { return Err(FenParseError::InvalidColor(part)); }
+                    };
+                },
+                
+                FEN_CASTLING_FLAGS_IDX => {
+                    board.castling_flags = CastlingFlags::from_str(part)
+                        .map_err(FenParseError::InvalidCastle)?;
+                },
+                
+                FEN_EN_PASSANT_SQUARE_IDX => {
+                    if part != "-" {
+                        board.en_passant_square = Some(
+                            Square::from_str(part)
+                            .map_err(FenParseError::InvalidEnPassantSquare)?
+                        ); 
+                    }
+                },
+                
+                FEN_FIFTY_MOVE_COUNTER_IDX => {
+                    board.fifty_move_counter = part
+                        .parse()
+                        .map_err(|_| FenParseError::InvalidFiftyMoveCounter(part))?;
+                },
+                
+                FEN_FULLMOVE_NUMBER_IDX => {
+                    board.fullmove_number = part
+                        .parse()
+                        .map_err(|_| FenParseError::InvalidFullmoveCounter(part))?;
+                },
+                _ => { return Err(FenParseError::InvalidFormat); }
+            }
+        }
+
+        if total_parts != 6 {
+            return Err(FenParseError::InvalidFormat);
+        }
+
+        Ok(board)
+    }
+
+    fn parse_piece_setup<'a>(board: &mut Self, pieces_setup: &'a str) -> Result<(), FenParseError<'a>> {
+        let mut row: u8 = 7;
+        let mut col: u8 = 0;
+        
+        for c in pieces_setup.chars() {
+            match c {
+                '1'..='8' => {
+                    let next_col: u8 = col + (c as u8) - b'0';
+
+                    if next_col > 8 {
+                        return Err(FenParseError::RowOverflow(col));
+                    }
+                    
+                    col = next_col;
+                },
+
+                fig if fig.is_ascii_alphabetic() => {
+                    let kind: Kind = match fig.to_ascii_lowercase() {
+                        'p' => { Kind::Pawn },
+                        'n' => { Kind::Knight },
+                        'b' => { Kind::Bishop },
+                        'r' => { Kind::Rook },
+                        'q' => { Kind::Queen },
+                        'k' => { Kind::King },
+                        _ => { return Err(FenParseError::InvalidPieceChar(fig)); }
+                    };
+
+                    let color: Color = if fig.is_ascii_uppercase() { Color::White } else { Color::Black };
+
+                    let piece: Piece = Piece::new(color, kind);
+
+                    if col >= 8 {
+                        return Err(FenParseError::RowOverflow(col));
+                    }
+
+                    let square: Square = Square::from_coords(row, col);
+
+                    board.board[usize::from(square)] = Some(piece);
+                    board.bitboards[piece.to_index()] |= Bitboard::new(square.to_bitboard_mask());
+                    board.side_bitboards[color.to_index()] |= Bitboard::new(square.to_bitboard_mask());
+
+                    col += 1;
+                },
+
+                '/' => {
+                    row = match row.checked_sub(1) {
+                        Some(n) => n,
+                        None => { return Err(FenParseError::ExtraRow); }
+                    };
+
+                    col = 0;
+                }
+
+                _ => { return Err(FenParseError::UnexpectedChar(c)); }
+            }
+        }
+
+        board.all_pieces_bitboard = board.side_bitboards[0] | board.side_bitboards[1];
+        
+        Ok(())
     }
     
     #[inline(always)]

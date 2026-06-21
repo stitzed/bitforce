@@ -5,3 +5,4 @@ pub mod piece_move;
 pub mod board;
 pub mod buffer;
 pub mod castle;
+pub mod errors;

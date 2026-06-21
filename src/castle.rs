@@ -1,4 +1,7 @@
+use std::str::FromStr;
+
 use crate::bitboard::Bitboard;
+use crate::errors::CastlingParseError;
 use crate::piece::Color;
 
 #[derive(Clone, Copy)]
@@ -80,5 +83,39 @@ impl CastlingFlags {
     #[inline(always)]
     pub fn can_castle(&self, color: Color, castling_type: CastlingType) -> bool {
         (self.0 & Self::castle_to_mask(color, castling_type)) != 0
+    }
+}
+
+impl FromStr for CastlingFlags {
+    type Err = CastlingParseError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let mut castling_flags: Self = Self(0);
+
+        if s == "-" {
+            return Ok(castling_flags);
+        }
+        
+        let mut current_rank: u8 = 0;
+
+        for c in s.chars() {
+            let (castling_rank, color, castling_type) = match c {
+                'K' => (1, Color::White, CastlingType::Kingside),
+                'Q' => (2, Color::White, CastlingType::Queenside),
+                'k' => (3, Color::Black, CastlingType::Kingside),
+                'q' => (4, Color::Black, CastlingType::Queenside),
+                _ => {return Err(CastlingParseError::InvalidChar(c));}
+            };
+
+            if castling_rank <= current_rank {
+                return Err(CastlingParseError::InvalidFormat);
+            }
+
+            castling_flags.set_flag(color, castling_type);
+
+            current_rank = castling_rank;
+        }
+        
+        Ok(castling_flags)
     }
 }
