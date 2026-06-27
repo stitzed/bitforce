@@ -7,6 +7,7 @@ name = "bitforce"
 version = "0.1.0"
 dependencies = [
  "derive_more",
+ "primitive-buffer",
  "thiserror",
 ]
 
@@ -30,6 +31,12 @@ dependencies = [
  "rustc_version",
  "syn",
 ]
+
+[[package]]
+name = "primitive-buffer"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ce3cf624dd3eca75fb7a3acfabc55a7860da2bb8904cef6ba54f34cfbf061a34"
 
 [[package]]
 name = "proc-macro2"

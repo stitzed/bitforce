@@ -2,12 +2,14 @@ use std::fmt::Display;
 use std::str::FromStr;
 
 use crate::bitboard::{Bitboard, KNIGHT_MASKS, KING_MASKS};
-use crate::buffer::{Buffer, MOVE_HISTORY_BUFFER_LEN, MOVE_BUFFER_LEN};
 use crate::castle::{CastlingType, CastlingFlags};
 use crate::errors::FenParseError;
 use crate::piece::{Color, Kind, Piece};
 use crate::piece_move::Move;
 use crate::square::Square;
+
+use primitive_buffer::Buffer;
+
 
 const FEN_PIECE_SETUP_IDX: usize = 0;
 const FEN_CURRENT_TURN_IDX: usize = 1;
@@ -15,6 +17,9 @@ const FEN_CASTLING_FLAGS_IDX: usize = 2;
 const FEN_EN_PASSANT_SQUARE_IDX: usize = 3;
 const FEN_FIFTY_MOVE_COUNTER_IDX: usize = 4;
 const FEN_FULLMOVE_NUMBER_IDX: usize = 5;
+
+const MOVE_HISTORY_BUFFER_LEN: usize = 512;
+const MOVE_BUFFER_LEN: usize = 128;
 
 pub struct ChessBoard {
     pub current_turn: Color,
