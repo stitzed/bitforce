@@ -1,5 +1,6 @@
-use std::ops::*;
 use std::fmt::Display;
+use std::ops::*;
+
 use crate::square::Square;
 
 const fn generate_masks(offsets: &[(i8, i8)]) -> [Bitboard; 64] {
@@ -9,10 +10,10 @@ const fn generate_masks(offsets: &[(i8, i8)]) -> [Bitboard; 64] {
 
     while i < 64 {
         let mut mask: u64 = 0;
-        
+
         let sq: Square = Square::new(i as u8);
         let (row, col) = (sq.row(), sq.col());
-        
+
         let mut arr_ptr: usize = 0;
 
         while arr_ptr < offsets.len() {
@@ -22,13 +23,12 @@ const fn generate_masks(offsets: &[(i8, i8)]) -> [Bitboard; 64] {
             if (delta_row >= 0 && delta_row < 8) && (delta_col >= 0 && delta_col < 8) {
                 mask |= Square::from_coords(delta_row as u8, delta_col as u8).to_bitboard_mask()
             }
-            
 
             arr_ptr += 1;
         }
 
         masks[i] = Bitboard::new(mask);
-        
+
         i += 1;
     }
 
@@ -36,6 +36,7 @@ const fn generate_masks(offsets: &[(i8, i8)]) -> [Bitboard; 64] {
 }
 
 const KNIGHT_OFFSETS: [(i8, i8); 8] = [(-2, -1), (-2, 1), (-1, -2), (-1, 2), (1, -2), (1, 2), (2, -1), (2, 1)];
+
 const KING_OFFSETS: [(i8, i8); 8] = [(-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)];
 
 pub const KNIGHT_MASKS: [Bitboard; 64] = generate_masks(&KNIGHT_OFFSETS);
@@ -50,7 +51,7 @@ impl Bitboard {
     pub const fn new(bitboard: u64) -> Self {
         Self(bitboard)
     }
-    
+
     #[inline(always)]
     pub fn set_bit(&mut self, square: Square) {
         self.0 |= square.to_bitboard_mask()
@@ -78,22 +79,22 @@ impl Bitboard {
 }
 
 impl BitAnd for Bitboard {
-   type Output = Self;
-   
-   fn bitand(self, rhs: Self) -> Self::Output {
-       Self(self.0 & rhs.0)
-   } 
+    type Output = Self;
+
+    fn bitand(self, rhs: Self) -> Self::Output {
+        Self(self.0 & rhs.0)
+    }
 }
 
 impl BitAndAssign for Bitboard {
     fn bitand_assign(&mut self, rhs: Self) {
         self.0 &= rhs.0
-    } 
+    }
 }
 
 impl BitOr for Bitboard {
     type Output = Self;
-    
+
     fn bitor(self, rhs: Self) -> Self::Output {
         Self(self.0 | rhs.0)
     }
@@ -107,7 +108,7 @@ impl BitOrAssign for Bitboard {
 
 impl Not for Bitboard {
     type Output = Self;
-    
+
     fn not(self) -> Self::Output {
         Self(!self.0)
     }
@@ -115,7 +116,7 @@ impl Not for Bitboard {
 
 impl Shl<u8> for Bitboard {
     type Output = Self;
-    
+
     fn shl(self, rhs: u8) -> Self::Output {
         Self(self.0 << (rhs & 63))
     }
@@ -123,7 +124,7 @@ impl Shl<u8> for Bitboard {
 
 impl Shr<u8> for Bitboard {
     type Output = Self;
-    
+
     fn shr(self, rhs: u8) -> Self::Output {
         Self(self.0 >> (rhs & 63))
     }
@@ -131,7 +132,7 @@ impl Shr<u8> for Bitboard {
 
 impl BitXor for Bitboard {
     type Output = Self;
-    
+
     fn bitxor(self, rhs: Self) -> Self::Output {
         Self(self.0 ^ rhs.0)
     }
@@ -159,7 +160,7 @@ impl Display for Bitboard {
 
             writeln!(f)?;
         }
-        
+
         Ok(())
     }
 }
@@ -168,7 +169,7 @@ pub struct BitboardIterator(Bitboard);
 
 impl Iterator for BitboardIterator {
     type Item = Square;
-    
+
     fn next(&mut self) -> Option<Self::Item> {
         if !self.0.is_empty() {
             let square: Square = self.0.first_square_unchecked();
@@ -184,12 +185,13 @@ impl Iterator for BitboardIterator {
 impl IntoIterator for Bitboard {
     type IntoIter = BitboardIterator;
     type Item = Square;
-    
+
     fn into_iter(self) -> Self::IntoIter {
         BitboardIterator(self)
     }
 }
 
+#[rustfmt::skip]
 #[macro_export]
 macro_rules! bitboard {
     (
@@ -203,7 +205,7 @@ macro_rules! bitboard {
         $r0_0:tt $r0_1:tt $r0_2:tt $r0_3:tt $r0_4:tt $r0_5:tt $r0_6:tt $r0_7:tt ;
     ) => {{
         let mut value: u64 = 0;
-        
+
         macro_rules! parse_bit {
             (X) => { 1 };
             (.) => { 0 };

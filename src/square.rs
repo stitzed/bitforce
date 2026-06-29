@@ -1,7 +1,8 @@
 use std::fmt::Display;
-
 use std::ops::{Add, Sub};
+
 use derive_more::Into;
+
 use crate::errors::SquareParseError;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Into)]
@@ -11,21 +12,21 @@ pub struct Square(u8);
 
 impl Square {
     pub const SQUARE_MASK: u8 = 0b111111;
-    
+
     #[inline(always)]
     pub const fn new(index: u8) -> Self {
         assert!(index < 64, "index must be in 0..64 range");
-        
+
         Self(index)
     }
 
     #[inline(always)]
     pub const fn from_coords(row: u8, col: u8) -> Self {
         assert!(row < 8 && col < 8, "coords must be in 0..8 range");
-        
+
         Self((row * 8) + col)
     }
-    
+
     #[inline(always)]
     pub const fn to_bitboard_mask(&self) -> u64 {
         1 << self.0
@@ -44,7 +45,7 @@ impl Square {
 
 impl Add<u8> for Square {
     type Output = Self;
-    
+
     fn add(self, rhs: u8) -> Self::Output {
         Self(self.0.wrapping_add(rhs))
     }
@@ -83,7 +84,7 @@ impl std::str::FromStr for Square {
         }
 
         let col_index: u8 = (col as u8) - b'a';
-        
+
         if !('1'..='8').contains(&row) {
             return Err(SquareParseError::InvalidRowChar(row));
         }

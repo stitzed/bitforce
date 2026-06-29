@@ -1,8 +1,8 @@
 use std::fmt::Debug;
 
 use crate::castle::CastlingType;
-use crate::square::Square;
 use crate::piece::Kind;
+use crate::square::Square;
 
 /// [11 free][2 castling_type][1 is_en_passant][3 captured_type][3 promotion_type][6 from][6 to]
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -12,12 +12,12 @@ pub struct Move(u32);
 impl Move {
     #[inline(always)]
     pub fn new(
-        from_square: Square, 
-        to_square: Square, 
-        promotion_type: Option<Kind>, 
-        captured_type: Option<Kind>, 
-        is_en_passant: bool, 
-        castling_type: Option<CastlingType>
+        from_square: Square,
+        to_square: Square,
+        promotion_type: Option<Kind>,
+        captured_type: Option<Kind>,
+        is_en_passant: bool,
+        castling_type: Option<CastlingType>,
     ) -> Self {
         let mut bits: u32 = (castling_type.map_or(0, |c| c as u32)) << 19;
 
@@ -34,7 +34,7 @@ impl Move {
     pub fn from_square(&self) -> Square {
         Square::new(((self.0 >> 6) & Square::SQUARE_MASK as u32) as u8)
     }
-    
+
     #[inline(always)]
     pub fn to_square(&self) -> Square {
         Square::new((self.0 & Square::SQUARE_MASK as u32) as u8)

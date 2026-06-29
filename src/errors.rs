@@ -16,10 +16,10 @@ pub enum FenParseError<'a> {
 
     #[error("unexpected character in piece setup: {0}")]
     UnexpectedChar(char),
-    
+
     #[error("invalid color char: {0}")]
     InvalidColor(&'a str),
-    
+
     #[error("invalid castle: {0}")]
     InvalidCastle(#[source] CastlingParseError),
 
@@ -37,9 +37,9 @@ pub enum FenParseError<'a> {
 pub enum CastlingParseError {
     #[error("expected K, Q, k or q found {0}")]
     InvalidChar(char),
-    
+
     #[error("invalid format")]
-    InvalidFormat
+    InvalidFormat,
 }
 
 #[derive(Error, Debug)]
