@@ -223,3 +223,25 @@ macro_rules! bitboard {
         Bitboard::new(value)
     }};
 }
+
+pub const RANK_3: Bitboard = bitboard![
+    . . . . . . . .;
+    . . . . . . . .;
+    . . . . . . . .;
+    . . . . . . . .;
+    . . . . . . . .;
+    X X X X X X X X;
+    . . . . . . . .;
+    . . . . . . . .;
+];
+
+pub const RANK_6: Bitboard = bitboard![
+    . . . . . . . .;
+    . . . . . . . .;
+    X X X X X X X X;
+    . . . . . . . .;
+    . . . . . . . .;
+    . . . . . . . .;
+    . . . . . . . .;
+    . . . . . . . .;
+];

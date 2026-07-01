@@ -3,7 +3,7 @@ use std::str::FromStr;
 
 use primitive_buffer::Buffer;
 
-use crate::bitboard::{Bitboard, KING_MASKS, KNIGHT_MASKS};
+use crate::bitboard::{Bitboard, KING_MASKS, KNIGHT_MASKS, RANK_3, RANK_6};
 use crate::castle::{CastlingFlags, CastlingType};
 use crate::errors::FenParseError;
 use crate::piece::{Color, Kind, Piece};
@@ -230,7 +230,7 @@ impl ChessBoard {
     ) -> &'a [Move] {
         for kind in Kind::ALL_KINDS {
             match kind {
-                Kind::Pawn => {}
+                Kind::Pawn => self.generate_pawn_moves(color, move_buffer),
                 Kind::Knight => self.generate_static_moves(color, kind, KNIGHT_MASKS, move_buffer),
                 Kind::Bishop => {}
                 Kind::Rook => {}
@@ -240,6 +240,77 @@ impl ChessBoard {
         }
 
         move_buffer.as_slice()
+    }
+
+    fn generate_pawn_moves(&self, color: Color, move_buffer: &mut Buffer<Move, MOVE_BUFFER_LEN>) {
+        match color {
+            Color::White => self.generate_white_pawn_moves(move_buffer),
+            Color::Black => self.generate_black_pawn_moves(move_buffer),
+        }
+    }
+
+    #[inline]
+    fn generate_white_pawn_moves(&self, move_buffer: &mut Buffer<Move, MOVE_BUFFER_LEN>) {
+        let pawn_bitboard: Bitboard = self.bitboards[Piece::new(Color::White, Kind::Pawn).to_index()];
+
+        let once_push: Bitboard = (pawn_bitboard << 8) & !self.all_pieces_bitboard;
+        let double_push: Bitboard = ((once_push & RANK_3) << 8) & !self.all_pieces_bitboard;
+
+        for sq in once_push {
+            #[rustfmt::skip]
+            move_buffer.push(Move::new(
+                sq - 8,
+                sq,
+                None,
+                None,
+                false,
+                None,
+            ));
+        }
+
+        for sq in double_push {
+            #[rustfmt::skip]
+            move_buffer.push(Move::new(
+                sq - 16,
+                sq,
+                None,
+                None,
+                false,
+                None,
+            ));
+        }
+    }
+
+    #[inline]
+    fn generate_black_pawn_moves(&self, move_buffer: &mut Buffer<Move, MOVE_BUFFER_LEN>) {
+        let pawn_bitboard: Bitboard = self.bitboards[Piece::new(Color::Black, Kind::Pawn).to_index()];
+
+        let once_push: Bitboard = (pawn_bitboard >> 8) & !self.all_pieces_bitboard;
+        let double_push: Bitboard = ((once_push & RANK_6) >> 8) & !self.all_pieces_bitboard;
+
+        for sq in once_push {
+            #[rustfmt::skip]
+            move_buffer.push(Move::new(
+                sq + 8,
+                sq,
+                None,
+                None,
+                false,
+                None,
+            ));
+        }
+
+        for sq in double_push {
+            #[rustfmt::skip]
+            move_buffer.push(Move::new(
+                sq + 16,
+                sq,
+                None,
+                None,
+                false,
+                None,
+            ));
+        }
     }
 
     fn generate_static_moves(
@@ -264,7 +335,7 @@ impl ChessBoard {
                     None,
                     None,
                     false,
-                    None
+                    None,
                 ));
             }
 
@@ -280,7 +351,7 @@ impl ChessBoard {
                     None,
                     captured_type,
                     false,
-                    None
+                    None,
                 ));
             }
         }
@@ -317,7 +388,7 @@ impl ChessBoard {
                     None,
                     None,
                     false,
-                    Some(castle)
+                    Some(castle),
                 ));
             }
         }
