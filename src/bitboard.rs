@@ -224,6 +224,28 @@ macro_rules! bitboard {
     }};
 }
 
+pub const FILE_A: Bitboard = bitboard![
+    X . . . . . . .;
+    X . . . . . . .;
+    X . . . . . . .;
+    X . . . . . . .;
+    X . . . . . . .;
+    X . . . . . . .;
+    X . . . . . . .;
+    X . . . . . . .;
+];
+
+pub const FILE_H: Bitboard = bitboard![
+    . . . . . . . X;
+    . . . . . . . X;
+    . . . . . . . X;
+    . . . . . . . X;
+    . . . . . . . X;
+    . . . . . . . X;
+    . . . . . . . X;
+    . . . . . . . X;
+];
+
 pub const RANK_3: Bitboard = bitboard![
     . . . . . . . .;
     . . . . . . . .;
