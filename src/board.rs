@@ -3,7 +3,7 @@ use std::str::FromStr;
 
 use primitive_buffer::Buffer;
 
-use crate::bitboard::{Bitboard, FILE_A, FILE_H, KING_MASKS, KNIGHT_MASKS, RANK_3, RANK_6};
+use crate::bitboard::{Bitboard, FILE_A, FILE_H, KING_MASKS, KNIGHT_MASKS, RANK_1, RANK_3, RANK_6, RANK_8};
 use crate::castle::{CastlingFlags, CastlingType};
 use crate::errors::FenParseError;
 use crate::piece::{Color, Kind, Piece};
@@ -266,7 +266,8 @@ impl ChessBoard {
 
         let right_attacks: Bitboard = (right_attacks_mask & opposite_bitboard) | (right_attacks_mask & ep_square_mask);
 
-        for sq in once_push {
+        // Quiet one push moves
+        for sq in once_push & !RANK_8 {
             #[rustfmt::skip]
             move_buffer.push(Move::new(
                 sq - 8,
@@ -278,6 +279,22 @@ impl ChessBoard {
             ));
         }
 
+        // Quiet one push moves with promotion
+        for sq in once_push & RANK_8 {
+            for promotion_type in Kind::PROMOTION_KINDS {
+                #[rustfmt::skip]
+                move_buffer.push(Move::new(
+                    sq - 8,
+                    sq,
+                    Some(promotion_type),
+                    None,
+                    false,
+                    None,
+                ));
+            }
+        }
+
+        // Quiet double push moves
         for sq in double_push {
             #[rustfmt::skip]
             move_buffer.push(Move::new(
@@ -290,7 +307,8 @@ impl ChessBoard {
             ));
         }
 
-        for sq in left_attacks {
+        // Left capture moves
+        for sq in left_attacks & !RANK_8 {
             let is_en_passant: bool = self.en_passant_square == Some(sq);
 
             let captured_type: Option<Kind> = self
@@ -309,7 +327,25 @@ impl ChessBoard {
             ));
         }
 
-        for sq in right_attacks {
+        // Left capture moves with promotion
+        for sq in left_attacks & RANK_8 {
+            let captured_type: Option<Kind> = self.get_piece_at(sq).map(|p| p.kind());
+
+            for promotion_type in Kind::PROMOTION_KINDS {
+                #[rustfmt::skip]
+                move_buffer.push(Move::new(
+                    sq - 7,
+                    sq,
+                    Some(promotion_type),
+                    captured_type,
+                    false,
+                    None,
+                ));
+            }
+        }
+
+        // Right capture moves
+        for sq in right_attacks & !RANK_8 {
             let is_en_passant: bool = self.en_passant_square == Some(sq);
 
             let captured_type: Option<Kind> = self
@@ -326,6 +362,23 @@ impl ChessBoard {
                 is_en_passant,
                 None,
             ));
+        }
+
+        // Right capture moves with promotion
+        for sq in right_attacks & RANK_8 {
+            let captured_type: Option<Kind> = self.get_piece_at(sq).map(|p| p.kind());
+
+            for promotion_type in Kind::PROMOTION_KINDS {
+                #[rustfmt::skip]
+                move_buffer.push(Move::new(
+                    sq - 9,
+                    sq,
+                    Some(promotion_type),
+                    captured_type,
+                    false,
+                    None,
+                ));
+            }
         }
     }
 
@@ -346,7 +399,8 @@ impl ChessBoard {
 
         let right_attacks: Bitboard = (right_attacks_mask & opposite_bitboard) | (right_attacks_mask & ep_square_mask);
 
-        for sq in once_push {
+        // Quiet one push moves
+        for sq in once_push & !RANK_1 {
             #[rustfmt::skip]
             move_buffer.push(Move::new(
                 sq + 8,
@@ -358,6 +412,22 @@ impl ChessBoard {
             ));
         }
 
+        // Quiet one push moves with promotion
+        for sq in once_push & RANK_1 {
+            for promotion_type in Kind::PROMOTION_KINDS {
+                #[rustfmt::skip]
+                move_buffer.push(Move::new(
+                    sq + 8,
+                    sq,
+                    Some(promotion_type),
+                    None,
+                    false,
+                    None,
+                ));
+            }
+        }
+
+        // Quiet double push moves
         for sq in double_push {
             #[rustfmt::skip]
             move_buffer.push(Move::new(
@@ -370,7 +440,8 @@ impl ChessBoard {
             ));
         }
 
-        for sq in left_attacks {
+        // Left capture moves
+        for sq in left_attacks & !RANK_1 {
             let is_en_passant: bool = self.en_passant_square == Some(sq);
 
             let captured_type: Option<Kind> = self
@@ -389,7 +460,25 @@ impl ChessBoard {
             ));
         }
 
-        for sq in right_attacks {
+        // Left capture moves with promotion
+        for sq in left_attacks & RANK_1 {
+            let captured_type: Option<Kind> = self.get_piece_at(sq).map(|p| p.kind());
+
+            for promotion_type in Kind::PROMOTION_KINDS {
+                #[rustfmt::skip]
+                move_buffer.push(Move::new(
+                    sq + 7,
+                    sq,
+                    Some(promotion_type),
+                    captured_type,
+                    false,
+                    None,
+                ));
+            }
+        }
+
+        // Right capture moves
+        for sq in right_attacks & !RANK_1 {
             let is_en_passant: bool = self.en_passant_square == Some(sq);
 
             let captured_type: Option<Kind> = self
@@ -406,6 +495,23 @@ impl ChessBoard {
                 is_en_passant,
                 None,
             ));
+        }
+
+        // Right capture moves with promotion
+        for sq in right_attacks & RANK_1 {
+            let captured_type: Option<Kind> = self.get_piece_at(sq).map(|p| p.kind());
+
+            for promotion_type in Kind::PROMOTION_KINDS {
+                #[rustfmt::skip]
+                move_buffer.push(Move::new(
+                    sq + 9,
+                    sq,
+                    Some(promotion_type),
+                    captured_type,
+                    false,
+                    None,
+                ));
+            }
         }
     }
 

@@ -246,6 +246,17 @@ pub const FILE_H: Bitboard = bitboard![
     . . . . . . . X;
 ];
 
+pub const RANK_1: Bitboard = bitboard![
+    . . . . . . . .;
+    . . . . . . . .;
+    . . . . . . . .;
+    . . . . . . . .;
+    . . . . . . . .;
+    . . . . . . . .;
+    . . . . . . . .;
+    X X X X X X X X;
+];
+
 pub const RANK_3: Bitboard = bitboard![
     . . . . . . . .;
     . . . . . . . .;
@@ -261,6 +272,17 @@ pub const RANK_6: Bitboard = bitboard![
     . . . . . . . .;
     . . . . . . . .;
     X X X X X X X X;
+    . . . . . . . .;
+    . . . . . . . .;
+    . . . . . . . .;
+    . . . . . . . .;
+    . . . . . . . .;
+];
+
+pub const RANK_8: Bitboard = bitboard![
+    X X X X X X X X;
+    . . . . . . . .;
+    . . . . . . . .;
     . . . . . . . .;
     . . . . . . . .;
     . . . . . . . .;

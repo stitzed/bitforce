@@ -51,6 +51,8 @@ impl Kind {
         Self::King,
     ];
 
+    pub const PROMOTION_KINDS: [Self; 4] = [Self::Knight, Self::Bishop, Self::Rook, Self::Queen];
+
     const START_ROW_MASKS: [u64; 6] = [
         0b1111_1111,
         0b0100_0010,
