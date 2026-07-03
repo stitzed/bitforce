@@ -451,7 +451,7 @@ impl ChessBoard {
 
             #[rustfmt::skip]
             move_buffer.push(Move::new(
-                sq + 7,
+                sq + 9,
                 sq,
                 None,
                 captured_type,
@@ -467,7 +467,7 @@ impl ChessBoard {
             for promotion_type in Kind::PROMOTION_KINDS {
                 #[rustfmt::skip]
                 move_buffer.push(Move::new(
-                    sq + 7,
+                    sq + 9,
                     sq,
                     Some(promotion_type),
                     captured_type,
@@ -488,7 +488,7 @@ impl ChessBoard {
 
             #[rustfmt::skip]
             move_buffer.push(Move::new(
-                sq + 9,
+                sq + 7,
                 sq,
                 None,
                 captured_type,
@@ -504,7 +504,7 @@ impl ChessBoard {
             for promotion_type in Kind::PROMOTION_KINDS {
                 #[rustfmt::skip]
                 move_buffer.push(Move::new(
-                    sq + 9,
+                    sq + 7,
                     sq,
                     Some(promotion_type),
                     captured_type,
