@@ -39,8 +39,16 @@ const KNIGHT_OFFSETS: [(i8, i8); 8] = [(-2, -1), (-2, 1), (-1, -2), (-1, 2), (1,
 
 const KING_OFFSETS: [(i8, i8); 8] = [(-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)];
 
+const WHITE_PAWN_ATTACKERS_OFFSETS: [(i8, i8); 2] = [(-1, -1), (-1, 1)];
+const BLACK_PAWN_ATTACKERS_OFFSETS: [(i8, i8); 2] = [(1, -1), (1, 1)];
+
 pub const KNIGHT_MASKS: [Bitboard; 64] = generate_masks(&KNIGHT_OFFSETS);
 pub const KING_MASKS: [Bitboard; 64] = generate_masks(&KING_OFFSETS);
+
+pub const WHITE_PAWN_ATTACKERS_MASKS: [Bitboard; 64] = generate_masks(&WHITE_PAWN_ATTACKERS_OFFSETS);
+pub const BLACK_PAWN_ATTACKERS_MASKS: [Bitboard; 64] = generate_masks(&BLACK_PAWN_ATTACKERS_OFFSETS);
+
+pub const PAWN_ATTACKERS_MASKS: [[Bitboard; 64]; 2] = [WHITE_PAWN_ATTACKERS_MASKS, BLACK_PAWN_ATTACKERS_MASKS];
 
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(transparent)]

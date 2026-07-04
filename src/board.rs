@@ -3,7 +3,10 @@ use std::str::FromStr;
 
 use primitive_buffer::Buffer;
 
-use crate::bitboard::{Bitboard, FILE_A, FILE_H, KING_MASKS, KNIGHT_MASKS, RANK_1, RANK_3, RANK_6, RANK_8};
+use crate::bitboard::{
+    BLACK_PAWN_ATTACKERS_MASKS, Bitboard, FILE_A, FILE_H, KING_MASKS, KNIGHT_MASKS, RANK_1, RANK_3, RANK_6, RANK_8,
+    WHITE_PAWN_ATTACKERS_MASKS,
+};
 use crate::castle::{CastlingFlags, CastlingType};
 use crate::errors::FenParseError;
 use crate::piece::{Color, Kind, Piece};
@@ -257,14 +260,28 @@ impl ChessBoard {
         let once_push: Bitboard = (pawn_bitboard << 8) & !self.all_pieces_bitboard;
         let double_push: Bitboard = ((once_push & RANK_3) << 8) & !self.all_pieces_bitboard;
 
-        let ep_square_mask: Bitboard = Bitboard::new(self.en_passant_square.map_or(0, |sq| sq.to_bitboard_mask()));
-
         let left_attacks_mask: Bitboard = (pawn_bitboard & !FILE_A) << 7;
         let right_attacks_mask: Bitboard = (pawn_bitboard & !FILE_H) << 9;
 
-        let left_attacks: Bitboard = (left_attacks_mask & opposite_bitboard) | (left_attacks_mask & ep_square_mask);
+        let left_attacks: Bitboard = left_attacks_mask & opposite_bitboard;
+        let right_attacks: Bitboard = right_attacks_mask & opposite_bitboard;
 
-        let right_attacks: Bitboard = (right_attacks_mask & opposite_bitboard) | (right_attacks_mask & ep_square_mask);
+        // En passant moves
+        if let Some(ep_sq) = self.en_passant_square {
+            let attackers: Bitboard = pawn_bitboard & WHITE_PAWN_ATTACKERS_MASKS[usize::from(ep_sq)];
+
+            for sq in attackers {
+                #[rustfmt::skip]
+                move_buffer.push(Move::new(
+                    sq,
+                    ep_sq,
+                    None,
+                    Some(Kind::Pawn),
+                    true,
+                    None,
+                ));
+            }
+        }
 
         // Quiet one push moves
         for sq in once_push & !RANK_8 {
@@ -309,12 +326,7 @@ impl ChessBoard {
 
         // Left capture moves
         for sq in left_attacks & !RANK_8 {
-            let is_en_passant: bool = self.en_passant_square == Some(sq);
-
-            let captured_type: Option<Kind> = self
-                .get_piece_at(sq)
-                .map(|p| p.kind())
-                .or(is_en_passant.then_some(Kind::Pawn));
+            let captured_type: Option<Kind> = self.get_piece_at(sq).map(|p| p.kind());
 
             #[rustfmt::skip]
             move_buffer.push(Move::new(
@@ -322,7 +334,7 @@ impl ChessBoard {
                 sq,
                 None,
                 captured_type,
-                is_en_passant,
+                false,
                 None,
             ));
         }
@@ -346,12 +358,7 @@ impl ChessBoard {
 
         // Right capture moves
         for sq in right_attacks & !RANK_8 {
-            let is_en_passant: bool = self.en_passant_square == Some(sq);
-
-            let captured_type: Option<Kind> = self
-                .get_piece_at(sq)
-                .map(|p| p.kind())
-                .or(is_en_passant.then_some(Kind::Pawn));
+            let captured_type: Option<Kind> = self.get_piece_at(sq).map(|p| p.kind());
 
             #[rustfmt::skip]
             move_buffer.push(Move::new(
@@ -359,7 +366,7 @@ impl ChessBoard {
                 sq,
                 None,
                 captured_type,
-                is_en_passant,
+                false,
                 None,
             ));
         }
@@ -390,14 +397,28 @@ impl ChessBoard {
         let once_push: Bitboard = (pawn_bitboard >> 8) & !self.all_pieces_bitboard;
         let double_push: Bitboard = ((once_push & RANK_6) >> 8) & !self.all_pieces_bitboard;
 
-        let ep_square_mask: Bitboard = Bitboard::new(self.en_passant_square.map_or(0, |sq| sq.to_bitboard_mask()));
-
         let left_attacks_mask: Bitboard = (pawn_bitboard & !FILE_A) >> 9;
         let right_attacks_mask: Bitboard = (pawn_bitboard & !FILE_H) >> 7;
 
-        let left_attacks: Bitboard = (left_attacks_mask & opposite_bitboard) | (left_attacks_mask & ep_square_mask);
+        let left_attacks: Bitboard = left_attacks_mask & opposite_bitboard;
+        let right_attacks: Bitboard = right_attacks_mask & opposite_bitboard;
 
-        let right_attacks: Bitboard = (right_attacks_mask & opposite_bitboard) | (right_attacks_mask & ep_square_mask);
+        // En passant moves
+        if let Some(ep_sq) = self.en_passant_square {
+            let attackers: Bitboard = pawn_bitboard & BLACK_PAWN_ATTACKERS_MASKS[usize::from(ep_sq)];
+
+            for sq in attackers {
+                #[rustfmt::skip]
+                move_buffer.push(Move::new(
+                    sq,
+                    ep_sq,
+                    None,
+                    Some(Kind::Pawn),
+                    true,
+                    None,
+                ));
+            }
+        }
 
         // Quiet one push moves
         for sq in once_push & !RANK_1 {
@@ -442,12 +463,7 @@ impl ChessBoard {
 
         // Left capture moves
         for sq in left_attacks & !RANK_1 {
-            let is_en_passant: bool = self.en_passant_square == Some(sq);
-
-            let captured_type: Option<Kind> = self
-                .get_piece_at(sq)
-                .map(|p| p.kind())
-                .or(is_en_passant.then_some(Kind::Pawn));
+            let captured_type: Option<Kind> = self.get_piece_at(sq).map(|p| p.kind());
 
             #[rustfmt::skip]
             move_buffer.push(Move::new(
@@ -455,7 +471,7 @@ impl ChessBoard {
                 sq,
                 None,
                 captured_type,
-                is_en_passant,
+                false,
                 None,
             ));
         }
@@ -479,12 +495,7 @@ impl ChessBoard {
 
         // Right capture moves
         for sq in right_attacks & !RANK_1 {
-            let is_en_passant: bool = self.en_passant_square == Some(sq);
-
-            let captured_type: Option<Kind> = self
-                .get_piece_at(sq)
-                .map(|p| p.kind())
-                .or(is_en_passant.then_some(Kind::Pawn));
+            let captured_type: Option<Kind> = self.get_piece_at(sq).map(|p| p.kind());
 
             #[rustfmt::skip]
             move_buffer.push(Move::new(
@@ -492,7 +503,7 @@ impl ChessBoard {
                 sq,
                 None,
                 captured_type,
-                is_en_passant,
+                false,
                 None,
             ));
         }
