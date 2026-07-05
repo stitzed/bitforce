@@ -574,8 +574,8 @@ impl ChessBoard {
         self.generate_static_moves(color, Kind::King, KING_MASKS, move_buffer);
 
         let (castle_square, mask_shift) = match color {
-            Color::White => (Square::new(4), 0),
-            Color::Black => (Square::new(60), 8 * 7),
+            Color::White => (Square::E1, 0),
+            Color::Black => (Square::E8, 8 * 7),
         };
 
         let king_bitboard: Bitboard = self.bitboards[Piece::new(color, Kind::King).to_index()];

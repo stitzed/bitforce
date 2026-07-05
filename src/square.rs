@@ -15,7 +15,7 @@ impl Square {
 
     #[inline(always)]
     pub const fn new(index: u8) -> Self {
-        assert!(index < 64, "index must be in 0..64 range");
+        debug_assert!(index < 64, "index must be in 0..64 range");
 
         Self(index)
     }
@@ -93,4 +93,71 @@ impl std::str::FromStr for Square {
 
         Ok(Square::from_coords(row_index, col_index))
     }
+}
+
+impl Square {
+    pub const A1: Self = Self::new(0);
+    pub const B1: Self = Self::new(1);
+    pub const C1: Self = Self::new(2);
+    pub const D1: Self = Self::new(3);
+    pub const E1: Self = Self::new(4);
+    pub const F1: Self = Self::new(5);
+    pub const G1: Self = Self::new(6);
+    pub const H1: Self = Self::new(7);
+    pub const A2: Self = Self::new(8);
+    pub const B2: Self = Self::new(9);
+    pub const C2: Self = Self::new(10);
+    pub const D2: Self = Self::new(11);
+    pub const E2: Self = Self::new(12);
+    pub const F2: Self = Self::new(13);
+    pub const G2: Self = Self::new(14);
+    pub const H2: Self = Self::new(15);
+    pub const A3: Self = Self::new(16);
+    pub const B3: Self = Self::new(17);
+    pub const C3: Self = Self::new(18);
+    pub const D3: Self = Self::new(19);
+    pub const E3: Self = Self::new(20);
+    pub const F3: Self = Self::new(21);
+    pub const G3: Self = Self::new(22);
+    pub const H3: Self = Self::new(23);
+    pub const A4: Self = Self::new(24);
+    pub const B4: Self = Self::new(25);
+    pub const C4: Self = Self::new(26);
+    pub const D4: Self = Self::new(27);
+    pub const E4: Self = Self::new(28);
+    pub const F4: Self = Self::new(29);
+    pub const G4: Self = Self::new(30);
+    pub const H4: Self = Self::new(31);
+    pub const A5: Self = Self::new(32);
+    pub const B5: Self = Self::new(33);
+    pub const C5: Self = Self::new(34);
+    pub const D5: Self = Self::new(35);
+    pub const E5: Self = Self::new(36);
+    pub const F5: Self = Self::new(37);
+    pub const G5: Self = Self::new(38);
+    pub const H5: Self = Self::new(39);
+    pub const A6: Self = Self::new(40);
+    pub const B6: Self = Self::new(41);
+    pub const C6: Self = Self::new(42);
+    pub const D6: Self = Self::new(43);
+    pub const E6: Self = Self::new(44);
+    pub const F6: Self = Self::new(45);
+    pub const G6: Self = Self::new(46);
+    pub const H6: Self = Self::new(47);
+    pub const A7: Self = Self::new(48);
+    pub const B7: Self = Self::new(49);
+    pub const C7: Self = Self::new(50);
+    pub const D7: Self = Self::new(51);
+    pub const E7: Self = Self::new(52);
+    pub const F7: Self = Self::new(53);
+    pub const G7: Self = Self::new(54);
+    pub const H7: Self = Self::new(55);
+    pub const A8: Self = Self::new(56);
+    pub const B8: Self = Self::new(57);
+    pub const C8: Self = Self::new(58);
+    pub const D8: Self = Self::new(59);
+    pub const E8: Self = Self::new(60);
+    pub const F8: Self = Self::new(61);
+    pub const G8: Self = Self::new(62);
+    pub const H8: Self = Self::new(63);
 }
