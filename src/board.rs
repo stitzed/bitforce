@@ -10,7 +10,7 @@ use crate::bitboard::{
 use crate::castle::{CastlingFlags, CastlingType};
 use crate::errors::FenParseError;
 use crate::piece::{Color, Kind, Piece};
-use crate::piece_move::Move;
+use crate::piece_move::{Move, MoveBuilder};
 use crate::square::Square;
 
 const FEN_PIECE_SETUP_IDX: usize = 0;
@@ -271,72 +271,41 @@ impl ChessBoard {
             let attackers: Bitboard = pawn_bitboard & WHITE_PAWN_ATTACKERS_MASKS[usize::from(ep_sq)];
 
             for sq in attackers {
-                #[rustfmt::skip]
-                move_buffer.push(Move::new(
-                    sq,
-                    ep_sq,
-                    None,
-                    Some(Kind::Pawn),
-                    true,
-                    None,
-                ));
+                move_buffer.push(
+                    MoveBuilder::new(sq, ep_sq)
+                        .with_capture(Kind::Pawn)
+                        .with_en_passant()
+                        .build(),
+                );
             }
         }
 
         // Quiet one push moves
         for sq in once_push & !RANK_8 {
-            #[rustfmt::skip]
-            move_buffer.push(Move::new(
-                sq - 8,
-                sq,
-                None,
-                None,
-                false,
-                None,
-            ));
+            move_buffer.push(MoveBuilder::new(sq - 8, sq).build());
         }
 
         // Quiet one push moves with promotion
         for sq in once_push & RANK_8 {
             for promotion_type in Kind::PROMOTION_KINDS {
-                #[rustfmt::skip]
-                move_buffer.push(Move::new(
-                    sq - 8,
-                    sq,
-                    Some(promotion_type),
-                    None,
-                    false,
-                    None,
-                ));
+                move_buffer.push(MoveBuilder::new(sq - 8, sq).with_promotion(promotion_type).build());
             }
         }
 
         // Quiet double push moves
         for sq in double_push {
-            #[rustfmt::skip]
-            move_buffer.push(Move::new(
-                sq - 16,
-                sq,
-                None,
-                None,
-                false,
-                None,
-            ));
+            move_buffer.push(MoveBuilder::new(sq - 16, sq).build());
         }
 
         // Left capture moves
         for sq in left_attacks & !RANK_8 {
             let captured_type: Option<Kind> = self.get_piece_at(sq).map(|p| p.kind());
 
-            #[rustfmt::skip]
-            move_buffer.push(Move::new(
-                sq - 7,
-                sq,
-                None,
-                captured_type,
-                false,
-                None,
-            ));
+            move_buffer.push(
+                MoveBuilder::new(sq - 7, sq)
+                    .with_optional_capture(captured_type)
+                    .build(),
+            );
         }
 
         // Left capture moves with promotion
@@ -344,15 +313,12 @@ impl ChessBoard {
             let captured_type: Option<Kind> = self.get_piece_at(sq).map(|p| p.kind());
 
             for promotion_type in Kind::PROMOTION_KINDS {
-                #[rustfmt::skip]
-                move_buffer.push(Move::new(
-                    sq - 7,
-                    sq,
-                    Some(promotion_type),
-                    captured_type,
-                    false,
-                    None,
-                ));
+                move_buffer.push(
+                    MoveBuilder::new(sq - 7, sq)
+                        .with_optional_capture(captured_type)
+                        .with_promotion(promotion_type)
+                        .build(),
+                );
             }
         }
 
@@ -360,15 +326,11 @@ impl ChessBoard {
         for sq in right_attacks & !RANK_8 {
             let captured_type: Option<Kind> = self.get_piece_at(sq).map(|p| p.kind());
 
-            #[rustfmt::skip]
-            move_buffer.push(Move::new(
-                sq - 9,
-                sq,
-                None,
-                captured_type,
-                false,
-                None,
-            ));
+            move_buffer.push(
+                MoveBuilder::new(sq - 9, sq)
+                    .with_optional_capture(captured_type)
+                    .build(),
+            );
         }
 
         // Right capture moves with promotion
@@ -376,15 +338,12 @@ impl ChessBoard {
             let captured_type: Option<Kind> = self.get_piece_at(sq).map(|p| p.kind());
 
             for promotion_type in Kind::PROMOTION_KINDS {
-                #[rustfmt::skip]
-                move_buffer.push(Move::new(
-                    sq - 9,
-                    sq,
-                    Some(promotion_type),
-                    captured_type,
-                    false,
-                    None,
-                ));
+                move_buffer.push(
+                    MoveBuilder::new(sq - 9, sq)
+                        .with_optional_capture(captured_type)
+                        .with_promotion(promotion_type)
+                        .build(),
+                );
             }
         }
     }
@@ -408,72 +367,41 @@ impl ChessBoard {
             let attackers: Bitboard = pawn_bitboard & BLACK_PAWN_ATTACKERS_MASKS[usize::from(ep_sq)];
 
             for sq in attackers {
-                #[rustfmt::skip]
-                move_buffer.push(Move::new(
-                    sq,
-                    ep_sq,
-                    None,
-                    Some(Kind::Pawn),
-                    true,
-                    None,
-                ));
+                move_buffer.push(
+                    MoveBuilder::new(sq, ep_sq)
+                        .with_capture(Kind::Pawn)
+                        .with_en_passant()
+                        .build(),
+                );
             }
         }
 
         // Quiet one push moves
         for sq in once_push & !RANK_1 {
-            #[rustfmt::skip]
-            move_buffer.push(Move::new(
-                sq + 8,
-                sq,
-                None,
-                None,
-                false,
-                None,
-            ));
+            move_buffer.push(MoveBuilder::new(sq + 8, sq).build());
         }
 
         // Quiet one push moves with promotion
         for sq in once_push & RANK_1 {
             for promotion_type in Kind::PROMOTION_KINDS {
-                #[rustfmt::skip]
-                move_buffer.push(Move::new(
-                    sq + 8,
-                    sq,
-                    Some(promotion_type),
-                    None,
-                    false,
-                    None,
-                ));
+                move_buffer.push(MoveBuilder::new(sq + 8, sq).with_promotion(promotion_type).build());
             }
         }
 
         // Quiet double push moves
         for sq in double_push {
-            #[rustfmt::skip]
-            move_buffer.push(Move::new(
-                sq + 16,
-                sq,
-                None,
-                None,
-                false,
-                None,
-            ));
+            move_buffer.push(MoveBuilder::new(sq + 16, sq).build());
         }
 
         // Left capture moves
         for sq in left_attacks & !RANK_1 {
             let captured_type: Option<Kind> = self.get_piece_at(sq).map(|p| p.kind());
 
-            #[rustfmt::skip]
-            move_buffer.push(Move::new(
-                sq + 9,
-                sq,
-                None,
-                captured_type,
-                false,
-                None,
-            ));
+            move_buffer.push(
+                MoveBuilder::new(sq + 9, sq)
+                    .with_optional_capture(captured_type)
+                    .build(),
+            );
         }
 
         // Left capture moves with promotion
@@ -481,15 +409,12 @@ impl ChessBoard {
             let captured_type: Option<Kind> = self.get_piece_at(sq).map(|p| p.kind());
 
             for promotion_type in Kind::PROMOTION_KINDS {
-                #[rustfmt::skip]
-                move_buffer.push(Move::new(
-                    sq + 9,
-                    sq,
-                    Some(promotion_type),
-                    captured_type,
-                    false,
-                    None,
-                ));
+                move_buffer.push(
+                    MoveBuilder::new(sq + 9, sq)
+                        .with_optional_capture(captured_type)
+                        .with_promotion(promotion_type)
+                        .build(),
+                );
             }
         }
 
@@ -497,15 +422,11 @@ impl ChessBoard {
         for sq in right_attacks & !RANK_1 {
             let captured_type: Option<Kind> = self.get_piece_at(sq).map(|p| p.kind());
 
-            #[rustfmt::skip]
-            move_buffer.push(Move::new(
-                sq + 7,
-                sq,
-                None,
-                captured_type,
-                false,
-                None,
-            ));
+            move_buffer.push(
+                MoveBuilder::new(sq + 7, sq)
+                    .with_optional_capture(captured_type)
+                    .build(),
+            );
         }
 
         // Right capture moves with promotion
@@ -513,15 +434,12 @@ impl ChessBoard {
             let captured_type: Option<Kind> = self.get_piece_at(sq).map(|p| p.kind());
 
             for promotion_type in Kind::PROMOTION_KINDS {
-                #[rustfmt::skip]
-                move_buffer.push(Move::new(
-                    sq + 7,
-                    sq,
-                    Some(promotion_type),
-                    captured_type,
-                    false,
-                    None,
-                ));
+                move_buffer.push(
+                    MoveBuilder::new(sq + 7, sq)
+                        .with_optional_capture(captured_type)
+                        .with_promotion(promotion_type)
+                        .build(),
+                );
             }
         }
     }
@@ -541,15 +459,7 @@ impl ChessBoard {
             let quiet_squares: Bitboard = piece_mask & !self.all_pieces_bitboard;
 
             for quiet_sq in quiet_squares {
-                #[rustfmt::skip]
-                move_buffer.push(Move::new(
-                    sq,
-                    quiet_sq,
-                    None,
-                    None,
-                    false,
-                    None,
-                ));
+                move_buffer.push(MoveBuilder::new(sq, quiet_sq).build());
             }
 
             let capture_squares: Bitboard = piece_mask & self.side_bitboards[(!color).to_index()];
@@ -557,15 +467,11 @@ impl ChessBoard {
             for cap_sq in capture_squares {
                 let captured_type: Option<Kind> = self.get_piece_at(cap_sq).map(|p| p.kind());
 
-                #[rustfmt::skip]
-                move_buffer.push(Move::new(
-                    sq,
-                    cap_sq,
-                    None,
-                    captured_type,
-                    false,
-                    None,
-                ));
+                move_buffer.push(
+                    MoveBuilder::new(sq, cap_sq)
+                        .with_optional_capture(captured_type)
+                        .build(),
+                );
             }
         }
     }
@@ -594,15 +500,7 @@ impl ChessBoard {
                 let mask: Bitboard = castle.xor_mask().king_mask << mask_shift;
                 let to_square: Square = (king_bitboard ^ mask).first_square_unchecked();
 
-                #[rustfmt::skip]
-                move_buffer.push(Move::new(
-                    king_square,
-                    to_square,
-                    None,
-                    None,
-                    false,
-                    Some(castle),
-                ));
+                move_buffer.push(MoveBuilder::new(king_square, to_square).with_castling(castle).build());
             }
         }
     }
