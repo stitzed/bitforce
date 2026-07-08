@@ -73,3 +73,55 @@ impl Debug for Move {
             .finish()
     }
 }
+
+pub struct MoveBuilder(u32);
+
+impl MoveBuilder {
+    #[inline(always)]
+    pub fn new(from_square: Square, to_square: Square) -> Self {
+        let mut bits: u32 = 0b0011_0110_0000_0000_0000;
+        bits |= (u32::from(from_square)) << 6;
+        bits |= u32::from(to_square);
+        Self(bits)
+    }
+
+    #[inline(always)]
+    pub fn with_promotion(mut self, kind: Kind) -> Self {
+        self.0 &= !((Kind::KIND_MASK as u32) << 12);
+        self.0 |= (kind as u32) << 12;
+        self
+    }
+
+    #[inline(always)]
+    pub fn with_capture(mut self, kind: Kind) -> Self {
+        self.0 &= !((Kind::KIND_MASK as u32) << 15);
+        self.0 |= (kind as u32) << 15;
+        self
+    }
+
+    #[inline(always)]
+    pub fn with_optional_capture(mut self, kind: Option<Kind>) -> Self {
+        let val: u32 = kind.map_or(Kind::NONE_VALUE as u32, |k| k as u32);
+        self.0 &= !((Kind::KIND_MASK as u32) << 15);
+        self.0 |= val << 15;
+        self
+    }
+
+    #[inline(always)]
+    pub fn with_en_passant(mut self) -> Self {
+        self.0 |= 1 << 18;
+        self
+    }
+
+    #[inline(always)]
+    pub fn with_castling(mut self, castling: CastlingType) -> Self {
+        self.0 &= !(0b11 << 19);
+        self.0 |= (castling as u32) << 19;
+        self
+    }
+
+    #[inline(always)]
+    pub fn build(self) -> Move {
+        Move(self.0)
+    }
+}
