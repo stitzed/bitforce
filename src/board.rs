@@ -4,8 +4,8 @@ use std::str::FromStr;
 use primitive_buffer::Buffer;
 
 use crate::bitboard::{
-    BLACK_PAWN_ATTACKERS_MASKS, Bitboard, FILE_A, FILE_H, KING_MASKS, KNIGHT_MASKS, RANK_1, RANK_3, RANK_6, RANK_8,
-    WHITE_PAWN_ATTACKERS_MASKS,
+    BISHOP_RAYS_MASKS, BLACK_PAWN_ATTACKERS_MASKS, Bitboard, FILE_A, FILE_H, KING_MASKS, KNIGHT_MASKS, RANK_1, RANK_3,
+    RANK_6, RANK_8, ROOK_RAYS_MASKS, WHITE_PAWN_ATTACKERS_MASKS,
 };
 use crate::castle::{CastlingFlags, CastlingType};
 use crate::errors::FenParseError;
@@ -235,9 +235,9 @@ impl ChessBoard {
             match kind {
                 Kind::Pawn => self.generate_pawn_moves(color, move_buffer),
                 Kind::Knight => self.generate_static_moves(color, kind, KNIGHT_MASKS, move_buffer),
-                Kind::Bishop => {}
-                Kind::Rook => {}
-                Kind::Queen => {}
+                Kind::Bishop => self.generate_sliding_moves(color, kind, &BISHOP_RAYS_MASKS, move_buffer),
+                Kind::Rook => self.generate_sliding_moves(color, kind, &ROOK_RAYS_MASKS, move_buffer),
+                Kind::Queen => self.generate_queen_moves(color, move_buffer),
                 Kind::King => self.generate_king_moves(color, move_buffer),
             }
         }
@@ -463,6 +463,92 @@ impl ChessBoard {
             }
 
             let capture_squares: Bitboard = piece_mask & self.side_bitboards[(!color).to_index()];
+
+            for cap_sq in capture_squares {
+                let captured_type: Option<Kind> = self.get_piece_at(cap_sq).map(|p| p.kind());
+
+                move_buffer.push(
+                    MoveBuilder::new(sq, cap_sq)
+                        .with_optional_capture(captured_type)
+                        .build(),
+                );
+            }
+        }
+    }
+
+    fn get_sliding_attacks(&self, square: Square, rays_masks: &[[Bitboard; 4]; 64]) -> Bitboard {
+        let mut attacks: Bitboard = Bitboard::new(0);
+
+        let rays: &[Bitboard; 4] = unsafe { rays_masks.get_unchecked(usize::from(square)) };
+
+        for (i, &ray) in rays.iter().enumerate() {
+            let bitboard_ray: Bitboard = self.all_pieces_bitboard & ray;
+
+            if bitboard_ray.is_empty() {
+                attacks |= ray;
+                continue;
+            }
+
+            let blocker_path: Bitboard = if i < 2 {
+                Bitboard::new((1u64 << (u8::from(bitboard_ray.first_square_unchecked()) + 1)) - 1)
+            } else {
+                Bitboard::new(!((1u64 << u8::from(bitboard_ray.last_square_unchecked())) - 1))
+            };
+
+            attacks |= ray & blocker_path;
+        }
+
+        attacks
+    }
+
+    fn generate_sliding_moves(
+        &self,
+        color: Color,
+        kind: Kind,
+        rays_masks: &[[Bitboard; 4]; 64],
+        move_buffer: &mut Buffer<Move, MOVE_BUFFER_LEN>,
+    ) {
+        let piece_bitboard: Bitboard = self.bitboards[Piece::new(color, kind).to_index()];
+
+        for sq in piece_bitboard {
+            let sliding_attacks: Bitboard = self.get_sliding_attacks(sq, rays_masks);
+
+            let quiet_squares: Bitboard = sliding_attacks & !self.all_pieces_bitboard;
+
+            for quiet_sq in quiet_squares {
+                move_buffer.push(MoveBuilder::new(sq, quiet_sq).build());
+            }
+
+            let capture_squares: Bitboard = sliding_attacks & self.side_bitboards[(!color).to_index()];
+
+            for cap_sq in capture_squares {
+                let captured_type: Option<Kind> = self.get_piece_at(cap_sq).map(|p| p.kind());
+
+                move_buffer.push(
+                    MoveBuilder::new(sq, cap_sq)
+                        .with_optional_capture(captured_type)
+                        .build(),
+                );
+            }
+        }
+    }
+
+    fn generate_queen_moves(&self, color: Color, move_buffer: &mut Buffer<Move, MOVE_BUFFER_LEN>) {
+        let piece_bitboard: Bitboard = self.bitboards[Piece::new(color, Kind::Queen).to_index()];
+
+        for sq in piece_bitboard {
+            let rook_attacks: Bitboard = self.get_sliding_attacks(sq, &ROOK_RAYS_MASKS);
+            let bishop_attacks: Bitboard = self.get_sliding_attacks(sq, &BISHOP_RAYS_MASKS);
+
+            let sliding_attacks: Bitboard = rook_attacks | bishop_attacks;
+
+            let quiet_squares: Bitboard = sliding_attacks & !self.all_pieces_bitboard;
+
+            for quiet_sq in quiet_squares {
+                move_buffer.push(MoveBuilder::new(sq, quiet_sq).build());
+            }
+
+            let capture_squares: Bitboard = sliding_attacks & self.side_bitboards[(!color).to_index()];
 
             for cap_sq in capture_squares {
                 let captured_type: Option<Kind> = self.get_piece_at(cap_sq).map(|p| p.kind());
