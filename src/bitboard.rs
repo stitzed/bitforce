@@ -84,6 +84,11 @@ impl Bitboard {
     pub fn first_square_unchecked(&self) -> Square {
         Square::new(self.0.trailing_zeros() as u8)
     }
+
+    #[inline(always)]
+    pub fn last_square_unchecked(&self) -> Square {
+        Square::new(63 - self.0.leading_zeros() as u8)
+    }
 }
 
 impl BitAnd for Bitboard {
