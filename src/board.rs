@@ -3,10 +3,7 @@ use std::str::FromStr;
 
 use primitive_buffer::Buffer;
 
-use crate::bitboard::{
-    BISHOP_RAYS_MASKS, BLACK_PAWN_ATTACKERS_MASKS, Bitboard, FILE_A, FILE_H, KING_MASKS, KNIGHT_MASKS, RANK_1, RANK_3,
-    RANK_6, RANK_8, ROOK_RAYS_MASKS, WHITE_PAWN_ATTACKERS_MASKS,
-};
+use crate::bitboard::prelude::*;
 use crate::castle::{CastlingFlags, CastlingType};
 use crate::errors::FenParseError;
 use crate::piece::{Color, Kind, Piece};

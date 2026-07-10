@@ -1,7 +1,14 @@
 use std::fmt::Display;
-use std::ops::*;
+use std::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Not, Shl, Shr};
 
 use crate::square::Square;
+
+pub mod prelude {
+    pub use crate::bitboard::{
+        BISHOP_RAYS_MASKS, BLACK_PAWN_ATTACKERS_MASKS, Bitboard, FILE_A, FILE_H, KING_MASKS, KNIGHT_MASKS,
+        PAWN_ATTACKERS_MASKS, RANK_1, RANK_3, RANK_6, RANK_8, ROOK_RAYS_MASKS, WHITE_PAWN_ATTACKERS_MASKS,
+    };
+}
 
 const fn generate_masks(offsets: &[(i8, i8)]) -> [Bitboard; 64] {
     let mut masks: [Bitboard; 64] = [Bitboard::new(0); 64];
