@@ -100,7 +100,7 @@ impl ChessBoard {
 
             match i {
                 FEN_PIECE_SETUP_IDX => {
-                    Self::parse_piece_setup(&mut board, part)?;
+                    board.parse_piece_setup(part)?;
                 }
 
                 FEN_CURRENT_TURN_IDX => {
@@ -146,7 +146,7 @@ impl ChessBoard {
         Ok(board)
     }
 
-    fn parse_piece_setup<'a>(board: &mut Self, pieces_setup: &'a str) -> Result<(), FenParseError<'a>> {
+    fn parse_piece_setup<'a>(&mut self, pieces_setup: &'a str) -> Result<(), FenParseError<'a>> {
         let mut row: u8 = 7;
         let mut col: u8 = 0;
 
@@ -189,9 +189,9 @@ impl ChessBoard {
 
                     let square: Square = Square::from_coords(row, col);
 
-                    board.board[usize::from(square)] = Some(piece);
-                    board.bitboards[piece.to_index()] |= Bitboard::new(square.to_bitboard_mask());
-                    board.side_bitboards[color.to_index()] |= Bitboard::new(square.to_bitboard_mask());
+                    self.board[usize::from(square)] = Some(piece);
+                    self.bitboards[piece.to_index()] |= Bitboard::new(square.to_bitboard_mask());
+                    self.side_bitboards[color.to_index()] |= Bitboard::new(square.to_bitboard_mask());
 
                     col += 1;
                 }
@@ -213,7 +213,7 @@ impl ChessBoard {
             }
         }
 
-        board.all_pieces_bitboard = board.side_bitboards[0] | board.side_bitboards[1];
+        self.all_pieces_bitboard = self.side_bitboards[0] | self.side_bitboards[1];
 
         Ok(())
     }
