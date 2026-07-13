@@ -20,6 +20,8 @@ const FEN_FULLMOVE_NUMBER_IDX: usize = 5;
 const MOVE_HISTORY_BUFFER_LEN: usize = 512;
 const MOVE_BUFFER_LEN: usize = 128;
 
+type MoveBuffer<'a> = &'a mut Buffer<Move, MOVE_BUFFER_LEN>;
+
 pub struct ChessBoard {
     pub current_turn: Color,
     history_of_moves: Buffer<Move, MOVE_HISTORY_BUFFER_LEN>,
@@ -223,11 +225,7 @@ impl ChessBoard {
         self.board[usize::from(square)]
     }
 
-    pub fn generate_pseudo_legal_moves<'a>(
-        &self,
-        color: Color,
-        move_buffer: &'a mut Buffer<Move, MOVE_BUFFER_LEN>,
-    ) -> &'a [Move] {
+    pub fn generate_pseudo_legal_moves<'a>(&self, color: Color, move_buffer: MoveBuffer<'a>) -> &'a [Move] {
         for kind in Kind::ALL_KINDS {
             match kind {
                 Kind::Pawn => self.generate_pawn_moves(color, move_buffer),
@@ -242,7 +240,7 @@ impl ChessBoard {
         move_buffer.as_slice()
     }
 
-    fn generate_pawn_moves(&self, color: Color, move_buffer: &mut Buffer<Move, MOVE_BUFFER_LEN>) {
+    fn generate_pawn_moves(&self, color: Color, move_buffer: MoveBuffer<'_>) {
         match color {
             Color::White => self.generate_white_pawn_moves(move_buffer),
             Color::Black => self.generate_black_pawn_moves(move_buffer),
@@ -250,7 +248,7 @@ impl ChessBoard {
     }
 
     #[inline]
-    fn generate_white_pawn_moves(&self, move_buffer: &mut Buffer<Move, MOVE_BUFFER_LEN>) {
+    fn generate_white_pawn_moves(&self, move_buffer: MoveBuffer<'_>) {
         let pawn_bitboard: Bitboard = self.bitboards[Piece::new(Color::White, Kind::Pawn).to_index()];
         let opposite_bitboard: Bitboard = self.side_bitboards[Color::Black.to_index()];
 
@@ -346,7 +344,7 @@ impl ChessBoard {
     }
 
     #[inline]
-    fn generate_black_pawn_moves(&self, move_buffer: &mut Buffer<Move, MOVE_BUFFER_LEN>) {
+    fn generate_black_pawn_moves(&self, move_buffer: MoveBuffer<'_>) {
         let pawn_bitboard: Bitboard = self.bitboards[Piece::new(Color::Black, Kind::Pawn).to_index()];
         let opposite_bitboard: Bitboard = self.side_bitboards[Color::White.to_index()];
 
@@ -446,7 +444,7 @@ impl ChessBoard {
         color: Color,
         kind: Kind,
         piece_masks: [Bitboard; 64],
-        move_buffer: &mut Buffer<Move, MOVE_BUFFER_LEN>,
+        move_buffer: MoveBuffer<'_>,
     ) {
         let piece_bitboard: Bitboard = self.bitboards[Piece::new(color, kind).to_index()];
 
@@ -503,7 +501,7 @@ impl ChessBoard {
         color: Color,
         kind: Kind,
         rays_masks: &[[Bitboard; 4]; 64],
-        move_buffer: &mut Buffer<Move, MOVE_BUFFER_LEN>,
+        move_buffer: MoveBuffer<'_>,
     ) {
         let piece_bitboard: Bitboard = self.bitboards[Piece::new(color, kind).to_index()];
 
@@ -530,7 +528,7 @@ impl ChessBoard {
         }
     }
 
-    fn generate_queen_moves(&self, color: Color, move_buffer: &mut Buffer<Move, MOVE_BUFFER_LEN>) {
+    fn generate_queen_moves(&self, color: Color, move_buffer: MoveBuffer<'_>) {
         let piece_bitboard: Bitboard = self.bitboards[Piece::new(color, Kind::Queen).to_index()];
 
         for sq in piece_bitboard {
@@ -559,7 +557,7 @@ impl ChessBoard {
         }
     }
 
-    fn generate_king_moves(&self, color: Color, move_buffer: &mut Buffer<Move, MOVE_BUFFER_LEN>) {
+    fn generate_king_moves(&self, color: Color, move_buffer: MoveBuffer<'_>) {
         self.generate_static_moves(color, Kind::King, KING_MASKS, move_buffer);
 
         let (castle_square, mask_shift) = match color {
