@@ -532,10 +532,7 @@ impl ChessBoard {
         let piece_bitboard: Bitboard = self.bitboards[Piece::new(color, Kind::Queen).to_index()];
 
         for sq in piece_bitboard {
-            let rook_attacks: Bitboard = self.get_sliding_attacks(sq, &ROOK_RAYS_MASKS);
-            let bishop_attacks: Bitboard = self.get_sliding_attacks(sq, &BISHOP_RAYS_MASKS);
-
-            let sliding_attacks: Bitboard = rook_attacks | bishop_attacks;
+            let sliding_attacks: Bitboard = self.get_queen_attacks(sq);
 
             let quiet_squares: Bitboard = sliding_attacks & !self.all_pieces_bitboard;
 
@@ -584,6 +581,74 @@ impl ChessBoard {
                 move_buffer.push(MoveBuilder::new(king_square, to_square).with_castling(castle).build());
             }
         }
+    }
+
+    fn get_pawn_attacks(square: Square, color: Color) -> Bitboard {
+        unsafe { *PAWN_ATTACKERS_MASKS[color.to_index()].get_unchecked(usize::from(square)) }
+    }
+
+    fn get_knight_attacks(square: Square) -> Bitboard {
+        unsafe { *KNIGHT_MASKS.get_unchecked(usize::from(square)) }
+    }
+
+    fn get_bishop_attacks(&self, square: Square) -> Bitboard {
+        self.get_sliding_attacks(square, &BISHOP_RAYS_MASKS)
+    }
+
+    fn get_rook_attacks(&self, square: Square) -> Bitboard {
+        self.get_sliding_attacks(square, &ROOK_RAYS_MASKS)
+    }
+
+    fn get_queen_attacks(&self, square: Square) -> Bitboard {
+        self.get_bishop_attacks(square) | self.get_rook_attacks(square)
+    }
+
+    fn get_king_attacks(square: Square) -> Bitboard {
+        unsafe { *KING_MASKS.get_unchecked(usize::from(square)) }
+    }
+
+    pub fn is_square_attacked(&self, square: Square, opposite_color: Color) -> bool {
+        // Pawn
+        if !(Self::get_pawn_attacks(square, opposite_color)
+            & self.bitboards[Piece::new(opposite_color, Kind::Pawn).to_index()])
+        .is_empty()
+        {
+            return true;
+        }
+
+        // Knight
+        if !(Self::get_knight_attacks(square) & self.bitboards[Piece::new(opposite_color, Kind::Knight).to_index()])
+            .is_empty()
+        {
+            return true;
+        }
+
+        // Bishop and Queen
+        if !(self.get_bishop_attacks(square)
+            & (self.bitboards[Piece::new(opposite_color, Kind::Bishop).to_index()]
+                | self.bitboards[Piece::new(opposite_color, Kind::Queen).to_index()]))
+        .is_empty()
+        {
+            return true;
+        }
+
+        // Rook and Queen
+        if !(self.get_rook_attacks(square)
+            & (self.bitboards[Piece::new(opposite_color, Kind::Rook).to_index()]
+                | self.bitboards[Piece::new(opposite_color, Kind::Queen).to_index()]))
+        .is_empty()
+        {
+            return true;
+        }
+
+        // King
+        if !(Self::get_king_attacks(square) & self.bitboards[Piece::new(opposite_color, Kind::King).to_index()])
+            .is_empty()
+        {
+            return true;
+        }
+
+        false
     }
 }
 
