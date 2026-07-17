@@ -560,10 +560,8 @@ impl ChessBoard {
     fn generate_king_moves(&self, color: Color, move_buffer: MoveBuffer<'_>) {
         self.generate_static_moves(color, Kind::King, KING_MASKS, move_buffer);
 
-        let (castle_square, mask_shift) = match color {
-            Color::White => (Square::E1, 0),
-            Color::Black => (Square::E8, 8 * 7),
-        };
+        let color_shift: u8 = (8 * 7) * (color as u8);
+        let castle_square: Square = Square::E1 + color_shift;
 
         let king_bitboard: Bitboard = self.bitboards[Piece::new(color, Kind::King).to_index()];
         let king_square: Square = king_bitboard.first_square_unchecked();
@@ -572,17 +570,29 @@ impl ChessBoard {
             return;
         }
 
+        if self.is_square_attacked(king_square, !color) {
+            return;
+        }
+
         for castle in CastlingType::ALL_CASTLING_TYPES {
             if !self.castling_flags.can_castle(color, castle) {
                 continue;
             }
 
-            if ((castle.path_mask() << mask_shift) & self.all_pieces_bitboard).is_empty() {
-                let mask: Bitboard = castle.xor_mask().king_mask << mask_shift;
-                let to_square: Square = (king_bitboard ^ mask).first_square_unchecked();
-
-                move_buffer.push(MoveBuilder::new(king_square, to_square).with_castling(castle).build());
+            let path_mask: Bitboard = (castle.path_mask() << color_shift) & self.all_pieces_bitboard;
+            if !(path_mask).is_empty() {
+                continue;
             }
+
+            let passed_square: Square = castle.passed_square() + color_shift;
+            if self.is_square_attacked(passed_square, !color) {
+                continue;
+            }
+
+            let mask: Bitboard = castle.xor_mask().king_mask << color_shift;
+            let to_square: Square = (king_bitboard ^ mask).first_square_unchecked();
+
+            move_buffer.push(MoveBuilder::new(king_square, to_square).with_castling(castle).build());
         }
     }
 

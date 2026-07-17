@@ -3,6 +3,7 @@ use std::str::FromStr;
 use crate::bitboard::Bitboard;
 use crate::errors::CastlingParseError;
 use crate::piece::Color;
+use crate::square::Square;
 
 #[derive(Clone, Copy)]
 pub struct CastlingXorMasks {
@@ -33,6 +34,8 @@ impl CastlingType {
         },
     ];
 
+    const PASSED_SQUARES: [Square; 2] = [Square::F1, Square::D1];
+
     #[inline(always)]
     pub fn from_index(index: u8) -> Option<Self> {
         let idx: u8 = index.checked_sub(1)?;
@@ -48,6 +51,11 @@ impl CastlingType {
     #[inline(always)]
     pub fn xor_mask(&self) -> CastlingXorMasks {
         Self::XOR_MASKS[*self as usize - 1]
+    }
+
+    #[inline(always)]
+    pub fn passed_square(&self) -> Square {
+        Self::PASSED_SQUARES[*self as usize - 1]
     }
 }
 
