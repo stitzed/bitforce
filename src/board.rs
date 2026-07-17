@@ -485,7 +485,10 @@ impl ChessBoard {
             }
 
             let blocker_path: Bitboard = if i < 2 {
-                Bitboard::new((1u64 << (u8::from(bitboard_ray.first_square_unchecked()) + 1)) - 1)
+                let sq: u8 = u8::from(bitboard_ray.first_square_unchecked());
+                let mask: u64 = 1u64.checked_shl((sq + 1) as u32).map(|v| v - 1).unwrap_or(u64::MAX);
+
+                Bitboard::new(mask)
             } else {
                 Bitboard::new(!((1u64 << u8::from(bitboard_ray.last_square_unchecked())) - 1))
             };
