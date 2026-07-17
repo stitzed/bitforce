@@ -78,7 +78,7 @@ impl CastlingFlags {
 
     #[inline(always)]
     fn castle_to_mask(color: Color, castling_type: CastlingType) -> u8 {
-        (castling_type as u8) << (color.to_index() * 2)
+        (castling_type as u8) << (color as u8 * 2)
     }
 
     #[inline(always)]

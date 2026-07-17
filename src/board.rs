@@ -193,7 +193,7 @@ impl ChessBoard {
 
                     self.board[usize::from(square)] = Some(piece);
                     self.bitboards[piece.to_index()] |= Bitboard::new(square.to_bitboard_mask());
-                    self.side_bitboards[color.to_index()] |= Bitboard::new(square.to_bitboard_mask());
+                    self.side_bitboards[color as usize] |= Bitboard::new(square.to_bitboard_mask());
 
                     col += 1;
                 }
@@ -250,7 +250,7 @@ impl ChessBoard {
     #[inline]
     fn generate_white_pawn_moves(&self, move_buffer: MoveBuffer<'_>) {
         let pawn_bitboard: Bitboard = self.bitboards[Piece::new(Color::White, Kind::Pawn).to_index()];
-        let opposite_bitboard: Bitboard = self.side_bitboards[Color::Black.to_index()];
+        let opposite_bitboard: Bitboard = self.side_bitboards[Color::Black as usize];
 
         let once_push: Bitboard = (pawn_bitboard << 8) & !self.all_pieces_bitboard;
         let double_push: Bitboard = ((once_push & RANK_3) << 8) & !self.all_pieces_bitboard;
@@ -346,7 +346,7 @@ impl ChessBoard {
     #[inline]
     fn generate_black_pawn_moves(&self, move_buffer: MoveBuffer<'_>) {
         let pawn_bitboard: Bitboard = self.bitboards[Piece::new(Color::Black, Kind::Pawn).to_index()];
-        let opposite_bitboard: Bitboard = self.side_bitboards[Color::White.to_index()];
+        let opposite_bitboard: Bitboard = self.side_bitboards[Color::White as usize];
 
         let once_push: Bitboard = (pawn_bitboard >> 8) & !self.all_pieces_bitboard;
         let double_push: Bitboard = ((once_push & RANK_6) >> 8) & !self.all_pieces_bitboard;
@@ -457,7 +457,7 @@ impl ChessBoard {
                 move_buffer.push(MoveBuilder::new(sq, quiet_sq).build());
             }
 
-            let capture_squares: Bitboard = piece_mask & self.side_bitboards[(!color).to_index()];
+            let capture_squares: Bitboard = piece_mask & self.side_bitboards[(!color) as usize];
 
             for cap_sq in capture_squares {
                 let captured_type: Option<Kind> = self.get_piece_at(cap_sq).map(|p| p.kind());
@@ -517,7 +517,7 @@ impl ChessBoard {
                 move_buffer.push(MoveBuilder::new(sq, quiet_sq).build());
             }
 
-            let capture_squares: Bitboard = sliding_attacks & self.side_bitboards[(!color).to_index()];
+            let capture_squares: Bitboard = sliding_attacks & self.side_bitboards[(!color) as usize];
 
             for cap_sq in capture_squares {
                 let captured_type: Option<Kind> = self.get_piece_at(cap_sq).map(|p| p.kind());
@@ -543,7 +543,7 @@ impl ChessBoard {
                 move_buffer.push(MoveBuilder::new(sq, quiet_sq).build());
             }
 
-            let capture_squares: Bitboard = sliding_attacks & self.side_bitboards[(!color).to_index()];
+            let capture_squares: Bitboard = sliding_attacks & self.side_bitboards[(!color) as usize];
 
             for cap_sq in capture_squares {
                 let captured_type: Option<Kind> = self.get_piece_at(cap_sq).map(|p| p.kind());
@@ -597,7 +597,7 @@ impl ChessBoard {
     }
 
     fn get_pawn_attacks(square: Square, color: Color) -> Bitboard {
-        unsafe { *PAWN_ATTACKERS_MASKS[color.to_index()].get_unchecked(usize::from(square)) }
+        unsafe { *PAWN_ATTACKERS_MASKS[color as usize].get_unchecked(usize::from(square)) }
     }
 
     fn get_knight_attacks(square: Square) -> Bitboard {

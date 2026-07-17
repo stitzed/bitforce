@@ -65,18 +65,13 @@ impl Kind {
     pub const KIND_MASK: u8 = 0b111;
 
     #[inline(always)]
-    pub fn to_index(&self) -> usize {
-        *self as usize
-    }
-
-    #[inline(always)]
     pub fn from_index(index: u8) -> Option<Self> {
         Self::ALL_KINDS.get(usize::from(index)).copied()
     }
 
     #[inline(always)]
     pub fn start_row_mask(&self) -> u64 {
-        Self::START_ROW_MASKS[self.to_index()]
+        Self::START_ROW_MASKS[*self as usize]
     }
 }
 
@@ -89,11 +84,6 @@ pub enum Color {
 
 impl Color {
     pub const ALL_COLORS: [Self; 2] = [Self::White, Self::Black];
-
-    #[inline(always)]
-    pub fn to_index(&self) -> usize {
-        *self as usize
-    }
 }
 
 impl Not for Color {
