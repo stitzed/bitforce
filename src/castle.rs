@@ -1,3 +1,4 @@
+use std::fmt::Display;
 use std::str::FromStr;
 
 use crate::bitboard::Bitboard;
@@ -92,6 +93,12 @@ impl CastlingFlags {
     }
 
     #[inline(always)]
+    pub fn update_castling(&mut self, color: Color, castling_type: CastlingType, can_castle: bool) {
+        let mask: u8 = Self::castle_to_mask(color, castling_type);
+        self.0 = (self.0 & !mask) | (mask * can_castle as u8);
+    }
+
+    #[inline(always)]
     pub fn unset_flag(&mut self, color: Color, castling_type: CastlingType) {
         self.0 &= !(Self::castle_to_mask(color, castling_type));
     }
@@ -99,6 +106,34 @@ impl CastlingFlags {
     #[inline(always)]
     pub fn can_castle(&self, color: Color, castling_type: CastlingType) -> bool {
         (self.0 & Self::castle_to_mask(color, castling_type)) != 0
+    }
+}
+
+impl Display for CastlingFlags {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        if self.0 == 0 {
+            write!(f, "-")?;
+            return Ok(());
+        }
+
+        for color in Color::ALL_COLORS {
+            for castle in CastlingType::ALL_CASTLING_TYPES {
+                if !self.can_castle(color, castle) {
+                    continue;
+                }
+
+                let char: char = match (color, castle) {
+                    (Color::White, CastlingType::Kingside) => 'K',
+                    (Color::White, CastlingType::Queenside) => 'Q',
+                    (Color::Black, CastlingType::Kingside) => 'k',
+                    (Color::Black, CastlingType::Queenside) => 'q',
+                };
+
+                write!(f, "{char}")?;
+            }
+        }
+
+        Ok(())
     }
 }
 
