@@ -11,7 +11,7 @@ pub struct CastlingXorMasks {
     pub king_mask: Bitboard,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u8)]
 pub enum CastlingType {
     Kingside = 1,
@@ -56,6 +56,11 @@ impl CastlingType {
     #[inline(always)]
     pub fn passed_square(&self) -> Square {
         Self::PASSED_SQUARES[*self as usize - 1]
+    }
+
+    #[inline(always)]
+    pub fn rook_start_square(&self) -> Square {
+        (Bitboard::new(self.passed_square().to_bitboard_mask()) ^ self.xor_mask().rook_mask).first_square_unchecked()
     }
 }
 
