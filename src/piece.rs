@@ -28,7 +28,7 @@ impl Piece {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u8)]
 pub enum Kind {
     Pawn,
@@ -84,6 +84,10 @@ pub enum Color {
 
 impl Color {
     pub const ALL_COLORS: [Self; 2] = [Self::White, Self::Black];
+
+    pub const fn shift(&self) -> u8 {
+        (8 * 7) * (*self as u8)
+    }
 }
 
 impl Not for Color {

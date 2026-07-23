@@ -560,7 +560,7 @@ impl ChessBoard {
     fn generate_king_moves(&self, color: Color, move_buffer: MoveBuffer<'_>) {
         self.generate_static_moves(color, Kind::King, KING_MASKS, move_buffer);
 
-        let color_shift: u8 = (8 * 7) * (color as u8);
+        let color_shift: u8 = color.shift();
         let castle_square: Square = Square::E1 + color_shift;
 
         let king_bitboard: Bitboard = self.bitboards[Piece::new(color, Kind::King).to_index()];
