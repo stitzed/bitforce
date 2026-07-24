@@ -684,6 +684,148 @@ impl ChessBoard {
 
         false
     }
+
+    pub fn make_move_unchecked(&mut self, piece_move: Move) {
+        let from_square: Square = piece_move.from_square();
+        let to_square: Square = piece_move.to_square();
+
+        let target_piece: Piece = self.get_piece_at(from_square).expect("from_square should be non-empty");
+        let target_piece_color: Color = target_piece.color();
+        let color_shift: u8 = target_piece_color.shift();
+        let en_passant_square: Square = match target_piece_color {
+            Color::White => to_square - 8,
+            Color::Black => to_square + 8,
+        };
+
+        self.clear_piece(target_piece, from_square);
+
+        if let Some(captured_type) = piece_move.captured_type() {
+            let square: Square = if piece_move.is_en_passant() {
+                en_passant_square
+            } else {
+                to_square
+            };
+
+            let opposite_piece: Piece = Piece::new(!target_piece_color, captured_type);
+
+            self.clear_piece(opposite_piece, square);
+        }
+
+        self.set_piece(target_piece, to_square);
+
+        if let Some(promotion_type) = piece_move.promotion_type() {
+            let promotion_piece: Piece = Piece::new(target_piece_color, promotion_type);
+
+            self.clear_piece(target_piece, to_square);
+            self.set_piece(promotion_piece, to_square);
+        }
+
+        if let Some(castling_type) = piece_move.castling_type() {
+            let rook: Piece = Piece::new(target_piece_color, Kind::Rook);
+            let rook_mask: Bitboard = castling_type.xor_mask().rook_mask << color_shift;
+
+            self.bitboards[rook.to_index()] ^= rook_mask;
+            self.side_bitboards[target_piece_color as usize] ^= rook_mask;
+            self.all_pieces_bitboard ^= rook_mask;
+            *self.get_piece_at_mut(castling_type.passed_square() + color_shift) = Some(rook);
+
+            *self.get_piece_at_mut(castling_type.rook_start_square() + color_shift) = None;
+        }
+
+        let is_king_moved: bool = target_piece.kind() == Kind::King;
+
+        for castle in CastlingType::ALL_CASTLING_TYPES {
+            let old_flag: bool = self.castling_flags.can_castle(target_piece_color, castle);
+
+            self.castling_flags
+                .update_castling(target_piece_color, castle, old_flag & !is_king_moved);
+        }
+
+        for color in Color::ALL_COLORS {
+            for castle in CastlingType::ALL_CASTLING_TYPES {
+                let color_shift: u8 = color.shift();
+                let old_flag: bool = self.castling_flags.can_castle(color, castle);
+
+                let is_rook_on_start_square: bool = self.bitboards[Piece::new(color, Kind::Rook).to_index()]
+                    .is_bit_setted(castle.rook_start_square() + color_shift);
+
+                self.castling_flags
+                    .update_castling(color, castle, old_flag & is_rook_on_start_square);
+            }
+        }
+
+        let is_double_push: bool =
+            target_piece.kind() == Kind::Pawn && u8::from(to_square) ^ u8::from(from_square) == 16;
+        self.en_passant_square = is_double_push.then_some(en_passant_square);
+
+        let reset_mask: bool = !(target_piece.kind() == Kind::Pawn || piece_move.captured_type().is_some());
+        self.fifty_move_counter = (self.fifty_move_counter + 1) * reset_mask as u8;
+
+        self.fullmove_number += self.current_turn as u16;
+
+        self.current_turn = !self.current_turn;
+        self.history_of_moves.push(piece_move);
+
+        debug_assert!(self.is_synchronized())
+    }
+
+    pub fn is_synchronized(&self) -> bool {
+        for i in 0..64 {
+            let piece: Option<Piece> = self.board[i];
+            let sq: Square = Square::new(i as u8);
+
+            match piece {
+                Some(p) => {
+                    let bb: Bitboard = self.bitboards[p.to_index()];
+                    if !bb.is_bit_setted(sq) {
+                        return false;
+                    }
+
+                    for (i, bb) in self.bitboards.iter().enumerate() {
+                        if i == p.to_index() {
+                            continue;
+                        }
+
+                        if bb.is_bit_setted(sq) {
+                            return false;
+                        }
+                    }
+
+                    let s_bb: Bitboard = self.side_bitboards[p.color() as usize];
+                    if !s_bb.is_bit_setted(sq) {
+                        return false;
+                    }
+
+                    if self.side_bitboards[!p.color() as usize].is_bit_setted(sq) {
+                        return false;
+                    }
+
+                    if !self.all_pieces_bitboard.is_bit_setted(sq) {
+                        return false;
+                    }
+                }
+                None => {
+                    for bb in self.bitboards {
+                        if bb.is_bit_setted(sq) {
+                            return false;
+                        }
+                    }
+
+                    for bb in self.side_bitboards {
+                        if bb.is_bit_setted(sq) {
+                            return false;
+                        }
+                    }
+
+                    if self.all_pieces_bitboard.is_bit_setted(sq) {
+                        return false;
+                    }
+                }
+            }
+        }
+
+        true
+    }
 }
 
 impl Display for ChessBoard {
