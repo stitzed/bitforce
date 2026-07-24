@@ -222,7 +222,28 @@ impl ChessBoard {
 
     #[inline(always)]
     pub fn get_piece_at(&self, square: Square) -> Option<Piece> {
-        self.board[usize::from(square)]
+        unsafe { *self.board.get_unchecked(usize::from(square)) }
+    }
+
+    #[inline(always)]
+    pub fn get_piece_at_mut(&mut self, square: Square) -> &mut Option<Piece> {
+        unsafe { self.board.get_unchecked_mut(usize::from(square)) }
+    }
+
+    #[inline(always)]
+    pub fn set_piece(&mut self, piece: Piece, square: Square) {
+        self.bitboards[piece.to_index()].set_bit(square);
+        self.side_bitboards[piece.color() as usize].set_bit(square);
+        self.all_pieces_bitboard.set_bit(square);
+        *self.get_piece_at_mut(square) = Some(piece);
+    }
+
+    #[inline(always)]
+    pub fn clear_piece(&mut self, piece: Piece, square: Square) {
+        self.bitboards[piece.to_index()].clear_bit(square);
+        self.side_bitboards[piece.color() as usize].clear_bit(square);
+        self.all_pieces_bitboard.clear_bit(square);
+        *self.get_piece_at_mut(square) = None;
     }
 
     pub fn generate_pseudo_legal_moves<'a>(&self, color: Color, move_buffer: MoveBuffer<'a>) -> &'a [Move] {
