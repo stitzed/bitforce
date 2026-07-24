@@ -232,17 +232,17 @@ impl ChessBoard {
 
     #[inline(always)]
     pub fn set_piece(&mut self, piece: Piece, square: Square) {
-        self.bitboards[piece.to_index()].set_bit(square);
-        self.side_bitboards[piece.color() as usize].set_bit(square);
-        self.all_pieces_bitboard.set_bit(square);
+        self.bitboards[piece.to_index()].set_square(square);
+        self.side_bitboards[piece.color() as usize].set_square(square);
+        self.all_pieces_bitboard.set_square(square);
         *self.get_piece_at_mut(square) = Some(piece);
     }
 
     #[inline(always)]
     pub fn clear_piece(&mut self, piece: Piece, square: Square) {
-        self.bitboards[piece.to_index()].clear_bit(square);
-        self.side_bitboards[piece.color() as usize].clear_bit(square);
-        self.all_pieces_bitboard.clear_bit(square);
+        self.bitboards[piece.to_index()].clear_square(square);
+        self.side_bitboards[piece.color() as usize].clear_square(square);
+        self.all_pieces_bitboard.clear_square(square);
         *self.get_piece_at_mut(square) = None;
     }
 
@@ -747,7 +747,7 @@ impl ChessBoard {
                 let old_flag: bool = self.castling_flags.can_castle(color, castle);
 
                 let is_rook_on_start_square: bool = self.bitboards[Piece::new(color, Kind::Rook).to_index()]
-                    .is_bit_setted(castle.rook_start_square() + color_shift);
+                    .is_square_set(castle.rook_start_square() + color_shift);
 
                 self.castling_flags
                     .update_castling(color, castle, old_flag & is_rook_on_start_square);
@@ -777,7 +777,7 @@ impl ChessBoard {
             match piece {
                 Some(p) => {
                     let bb: Bitboard = self.bitboards[p.to_index()];
-                    if !bb.is_bit_setted(sq) {
+                    if !bb.is_square_set(sq) {
                         return false;
                     }
 
@@ -786,38 +786,38 @@ impl ChessBoard {
                             continue;
                         }
 
-                        if bb.is_bit_setted(sq) {
+                        if bb.is_square_set(sq) {
                             return false;
                         }
                     }
 
                     let s_bb: Bitboard = self.side_bitboards[p.color() as usize];
-                    if !s_bb.is_bit_setted(sq) {
+                    if !s_bb.is_square_set(sq) {
                         return false;
                     }
 
-                    if self.side_bitboards[!p.color() as usize].is_bit_setted(sq) {
+                    if self.side_bitboards[!p.color() as usize].is_square_set(sq) {
                         return false;
                     }
 
-                    if !self.all_pieces_bitboard.is_bit_setted(sq) {
+                    if !self.all_pieces_bitboard.is_square_set(sq) {
                         return false;
                     }
                 }
                 None => {
                     for bb in self.bitboards {
-                        if bb.is_bit_setted(sq) {
+                        if bb.is_square_set(sq) {
                             return false;
                         }
                     }
 
                     for bb in self.side_bitboards {
-                        if bb.is_bit_setted(sq) {
+                        if bb.is_square_set(sq) {
                             return false;
                         }
                     }
 
-                    if self.all_pieces_bitboard.is_bit_setted(sq) {
+                    if self.all_pieces_bitboard.is_square_set(sq) {
                         return false;
                     }
                 }

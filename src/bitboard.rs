@@ -122,17 +122,17 @@ impl Bitboard {
     }
 
     #[inline(always)]
-    pub fn set_bit(&mut self, square: Square) {
+    pub fn set_square(&mut self, square: Square) {
         self.0 |= square.to_bitboard_mask()
     }
 
     #[inline(always)]
-    pub fn clear_bit(&mut self, square: Square) {
+    pub fn clear_square(&mut self, square: Square) {
         self.0 &= !(square.to_bitboard_mask())
     }
 
     #[inline(always)]
-    pub fn is_bit_setted(&self, square: Square) -> bool {
+    pub fn is_square_set(&self, square: Square) -> bool {
         self.0 & (square.to_bitboard_mask()) != 0
     }
 
@@ -225,7 +225,7 @@ impl Display for Bitboard {
                 let index: u8 = row * 8 + col;
                 let square: Square = Square::new(index);
 
-                if self.is_bit_setted(square) {
+                if self.is_square_set(square) {
                     write!(f, "X ")?;
                 } else {
                     write!(f, ". ")?;
