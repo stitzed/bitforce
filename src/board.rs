@@ -695,6 +695,13 @@ impl ChessBoard {
         false
     }
 
+    pub fn is_in_check(&self, color: Color) -> bool {
+        self.is_square_attacked(
+            self.bitboards[Piece::new(color, Kind::King).to_index()].first_square_unchecked(),
+            !color,
+        )
+    }
+
     pub fn make_move_unchecked(&mut self, piece_move: Move) {
         let from_square: Square = piece_move.from_square();
         let to_square: Square = piece_move.to_square();
@@ -845,6 +852,29 @@ impl ChessBoard {
         self.fullmove_number -= self.current_turn as u16;
 
         debug_assert!(self.is_synchronized())
+    }
+
+    pub fn perft(&mut self, depth: usize) -> u64 {
+        if depth == 0 {
+            return 1;
+        }
+
+        let mut nodes: u64 = 0;
+        let mut buf: Buffer<Move, MOVE_BUFFER_LEN> = Buffer::new();
+        let moves: &[Move] = self.generate_pseudo_legal_moves(self.current_turn, &mut buf);
+
+        for &mv in moves {
+            self.make_move_unchecked(mv);
+
+            if self.is_in_check(!self.current_turn) {
+                self.unmake_move();
+                continue;
+            }
+
+            nodes += self.perft(depth - 1);
+            self.unmake_move();
+        }
+        nodes
     }
 
     pub fn is_synchronized(&self) -> bool {
