@@ -22,6 +22,13 @@ const MOVE_BUFFER_LEN: usize = 128;
 
 type MoveBuffer<'a> = &'a mut Buffer<Move, MOVE_BUFFER_LEN>;
 
+#[derive(Clone, Copy)]
+struct UndoInfo {
+    castling_flags: CastlingFlags,
+    en_passant_square: Option<Square>,
+    fifty_move_counter: u8,
+}
+
 pub struct ChessBoard {
     pub current_turn: Color,
     history_of_moves: Buffer<Move, MOVE_HISTORY_BUFFER_LEN>,
@@ -35,6 +42,7 @@ pub struct ChessBoard {
     /// `[ALL_W, ALL_B]`
     side_bitboards: [Bitboard; 2],
     all_pieces_bitboard: Bitboard,
+    undo_info_stack: Buffer<UndoInfo, MOVE_BUFFER_LEN>,
 }
 
 impl ChessBoard {
@@ -78,6 +86,7 @@ impl ChessBoard {
             bitboards,
             side_bitboards,
             all_pieces_bitboard: all_white_bitboard | all_black_bitboard,
+            undo_info_stack: Buffer::new(),
         }
     }
 
@@ -93,6 +102,7 @@ impl ChessBoard {
             bitboards: [Bitboard::default(); 12],
             side_bitboards: [Bitboard::default(); 2],
             all_pieces_bitboard: Bitboard::default(),
+            undo_info_stack: Buffer::new(),
         };
 
         let mut total_parts: u8 = 0;
@@ -697,6 +707,14 @@ impl ChessBoard {
             Color::Black => to_square + 8,
         };
 
+        let undo_info: UndoInfo = UndoInfo {
+            castling_flags: self.castling_flags,
+            en_passant_square: self.en_passant_square,
+            fifty_move_counter: self.fifty_move_counter,
+        };
+
+        self.undo_info_stack.push(undo_info);
+
         self.clear_piece(target_piece, from_square);
 
         if let Some(captured_type) = piece_move.captured_type() {
@@ -765,6 +783,66 @@ impl ChessBoard {
 
         self.current_turn = !self.current_turn;
         self.history_of_moves.push(piece_move);
+
+        debug_assert!(self.is_synchronized())
+    }
+
+    pub fn unmake_move(&mut self) {
+        let piece_move: Move = self
+            .history_of_moves
+            .pop()
+            .expect("history_of_moves should be non-empty");
+
+        let undo_info: UndoInfo = self.undo_info_stack.pop().expect("undo_info_stack should be non-empty");
+
+        let from_square: Square = piece_move.from_square();
+        let to_square: Square = piece_move.to_square();
+
+        let target_piece: Piece = self.get_piece_at(to_square).expect("to_square should be non-empty");
+        let target_piece_color: Color = target_piece.color();
+        let color_shift: u8 = target_piece_color.shift();
+
+        self.clear_piece(target_piece, to_square);
+        self.set_piece(target_piece, from_square);
+
+        if let Some(captured_type) = piece_move.captured_type() {
+            let square: Square = if piece_move.is_en_passant() {
+                match target_piece_color {
+                    Color::White => to_square - 8,
+                    Color::Black => to_square + 8,
+                }
+            } else {
+                to_square
+            };
+
+            let opposite_piece: Piece = Piece::new(!target_piece_color, captured_type);
+
+            self.set_piece(opposite_piece, square);
+        }
+
+        if piece_move.promotion_type().is_some() {
+            self.clear_piece(target_piece, from_square);
+            self.set_piece(Piece::new(target_piece_color, Kind::Pawn), from_square);
+        }
+
+        if let Some(castling_type) = piece_move.castling_type() {
+            let rook: Piece = Piece::new(target_piece_color, Kind::Rook);
+            let rook_mask: Bitboard = castling_type.xor_mask().rook_mask << color_shift;
+
+            self.bitboards[rook.to_index()] ^= rook_mask;
+            self.side_bitboards[target_piece_color as usize] ^= rook_mask;
+            self.all_pieces_bitboard ^= rook_mask;
+            *self.get_piece_at_mut(castling_type.passed_square() + color_shift) = None;
+
+            *self.get_piece_at_mut(castling_type.rook_start_square() + color_shift) = Some(rook);
+        }
+
+        self.castling_flags = undo_info.castling_flags;
+        self.en_passant_square = undo_info.en_passant_square;
+        self.fifty_move_counter = undo_info.fifty_move_counter;
+
+        self.current_turn = !self.current_turn;
+        self.fullmove_number -= self.current_turn as u16;
 
         debug_assert!(self.is_synchronized())
     }
