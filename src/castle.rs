@@ -1,5 +1,5 @@
-use std::fmt::Display;
-use std::str::FromStr;
+use core::fmt::Display;
+use core::str::FromStr;
 
 use crate::bitboard::Bitboard;
 use crate::errors::CastlingParseError;
@@ -110,7 +110,7 @@ impl CastlingFlags {
 }
 
 impl Display for CastlingFlags {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         if self.0 == 0 {
             write!(f, "-")?;
             return Ok(());

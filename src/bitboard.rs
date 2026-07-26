@@ -1,5 +1,5 @@
-use std::fmt::Display;
-use std::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Not, Shl, Shr};
+use core::fmt::Display;
+use core::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Not, Shl, Shr};
 
 use crate::square::Square;
 
@@ -219,7 +219,7 @@ impl BitXorAssign for Bitboard {
 }
 
 impl Display for Bitboard {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         for row in (0..8).rev() {
             for col in 0..8 {
                 let index: u8 = row * 8 + col;

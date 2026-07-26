@@ -1,4 +1,4 @@
-use std::ops::Not;
+use core::ops::Not;
 
 /// Bit layout:
 /// `[4 free][1 color][3 kind]`

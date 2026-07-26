@@ -1,4 +1,4 @@
-use std::fmt::Debug;
+use core::fmt::Debug;
 
 use crate::castle::CastlingType;
 use crate::piece::Kind;
@@ -62,7 +62,7 @@ impl Move {
 }
 
 impl Debug for Move {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         f.debug_struct("Move")
             .field("from_square", &format_args!("{}", self.from_square()))
             .field("to_square", &format_args!("{}", self.to_square()))

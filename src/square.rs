@@ -1,5 +1,6 @@
-use std::fmt::Display;
-use std::ops::{Add, Sub};
+use core::fmt::Display;
+use core::ops::{Add, Sub};
+use core::str::FromStr;
 
 use derive_more::Into;
 
@@ -60,13 +61,15 @@ impl Sub<u8> for Square {
 }
 
 impl Display for Square {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         let col_char: char = char::from_u32(('a' as u32) + self.col() as u32).unwrap_or('?');
-        f.write_str(&format!("{}{}", col_char, self.row() + 1))
+        write!(f, "{col_char}")?;
+        write!(f, "{}", self.row() + 1)?;
+        Ok(())
     }
 }
 
-impl std::str::FromStr for Square {
+impl FromStr for Square {
     type Err = SquareParseError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
