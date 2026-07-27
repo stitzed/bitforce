@@ -1,4 +1,5 @@
 use core::fmt::Debug;
+use core::fmt::Display;
 
 use crate::castle::CastlingType;
 use crate::piece::Kind;
@@ -58,6 +59,26 @@ impl Move {
     #[inline(always)]
     pub fn castling_type(&self) -> Option<CastlingType> {
         CastlingType::from_index((self.0 >> 19) as u8)
+    }
+}
+
+impl Display for Move {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(f, "{}", self.from_square())?;
+        write!(f, "{}", self.to_square())?;
+
+        if let Some(promotion_type) = self.promotion_type() {
+            match promotion_type {
+                Kind::Pawn => write!(f, "p")?,
+                Kind::Knight => write!(f, "n")?,
+                Kind::Bishop => write!(f, "b")?,
+                Kind::Rook => write!(f, "r")?,
+                Kind::Queen => write!(f, "q")?,
+                Kind::King => write!(f, "k")?,
+            }
+        }
+
+        Ok(())
     }
 }
 
