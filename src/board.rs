@@ -1,4 +1,4 @@
-use core::fmt::Display;
+use core::fmt::{Display, Write};
 use core::str::FromStr;
 
 use primitive_buffer::Buffer;
@@ -81,7 +81,7 @@ impl ChessBoard {
             castling_flags: CastlingFlags::new(true, true, true, true),
             en_passant_square: None,
             fifty_move_counter: 0,
-            fullmove_number: 0,
+            fullmove_number: 1,
             board,
             bitboards,
             side_bitboards,
@@ -226,6 +226,85 @@ impl ChessBoard {
         }
 
         self.all_pieces_bitboard = self.side_bitboards[0] | self.side_bitboards[1];
+
+        Ok(())
+    }
+
+    pub fn to_fen<W: Write>(&self, dest: &mut W) -> core::fmt::Result {
+        let mut is_first_row: bool = true;
+
+        for row in self.board.chunks(8).rev() {
+            let mut empty_squares: u8 = 0;
+
+            if !is_first_row {
+                write!(dest, "/")?
+            }
+
+            for piece in row {
+                match piece {
+                    Some(p) => {
+                        if empty_squares != 0 {
+                            write!(dest, "{empty_squares}")?;
+                        }
+
+                        match (p.color(), p.kind()) {
+                            (Color::White, Kind::Pawn) => write!(dest, "P")?,
+                            (Color::White, Kind::Knight) => write!(dest, "N")?,
+                            (Color::White, Kind::Bishop) => write!(dest, "B")?,
+                            (Color::White, Kind::Rook) => write!(dest, "R")?,
+                            (Color::White, Kind::Queen) => write!(dest, "Q")?,
+                            (Color::White, Kind::King) => write!(dest, "K")?,
+                            (Color::Black, Kind::Pawn) => write!(dest, "p")?,
+                            (Color::Black, Kind::Knight) => write!(dest, "n")?,
+                            (Color::Black, Kind::Bishop) => write!(dest, "b")?,
+                            (Color::Black, Kind::Rook) => write!(dest, "r")?,
+                            (Color::Black, Kind::Queen) => write!(dest, "q")?,
+                            (Color::Black, Kind::King) => write!(dest, "k")?,
+                        };
+
+                        empty_squares = 0;
+                    }
+
+                    None => {
+                        empty_squares += 1;
+                    }
+                }
+            }
+
+            if empty_squares != 0 {
+                write!(dest, "{empty_squares}")?;
+            }
+
+            is_first_row = false;
+        }
+
+        write!(dest, " ")?;
+
+        let color_char: char = match self.current_turn {
+            Color::White => 'w',
+            Color::Black => 'b',
+        };
+
+        write!(dest, "{color_char}")?;
+
+        write!(dest, " ")?;
+
+        write!(dest, "{}", self.castling_flags)?;
+
+        write!(dest, " ")?;
+
+        match self.en_passant_square {
+            Some(sq) => write!(dest, "{sq}")?,
+            None => write!(dest, "-")?,
+        }
+
+        write!(dest, " ")?;
+
+        write!(dest, "{}", self.fifty_move_counter)?;
+
+        write!(dest, " ")?;
+
+        write!(dest, "{}", self.fullmove_number)?;
 
         Ok(())
     }
