@@ -18,7 +18,7 @@ const fn generate_masks(offsets: &[(i8, i8)]) -> [Bitboard; 64] {
     while i < 64 {
         let mut mask: u64 = 0;
 
-        let sq: Square = Square::new(i as u8);
+        let sq: Square = unsafe { Square::new_unchecked(i as u8) };
         let (row, col) = (sq.row(), sq.col());
 
         let mut arr_ptr: usize = 0;
@@ -50,7 +50,7 @@ const fn generate_rays_masks<const N: usize>(offsets: &[(i8, i8)]) -> [[Bitboard
     while i < 64 {
         let mut rays_raw: [u64; N] = [0; N];
 
-        let sq: Square = Square::new(i as u8);
+        let sq: Square = unsafe { Square::new_unchecked(i as u8) };
         let (row, col) = (sq.row(), sq.col());
 
         let mut arr_ptr: usize = 0;
@@ -143,12 +143,12 @@ impl Bitboard {
 
     #[inline(always)]
     pub fn first_square_unchecked(&self) -> Square {
-        Square::new(self.0.trailing_zeros() as u8)
+        unsafe { Square::new_unchecked(self.0.trailing_zeros() as u8) }
     }
 
     #[inline(always)]
     pub fn last_square_unchecked(&self) -> Square {
-        Square::new(63 - self.0.leading_zeros() as u8)
+        unsafe { Square::new_unchecked(63 - self.0.leading_zeros() as u8) }
     }
 }
 
@@ -223,7 +223,7 @@ impl Display for Bitboard {
         for row in (0..8).rev() {
             for col in 0..8 {
                 let index: u8 = row * 8 + col;
-                let square: Square = Square::new(index);
+                let square: Square = unsafe { Square::new_unchecked(index) };
 
                 if self.is_square_set(square) {
                     write!(f, "X ")?;

@@ -33,12 +33,12 @@ impl Move {
 
     #[inline(always)]
     pub fn from_square(&self) -> Square {
-        Square::new(((self.0 >> 6) & Square::SQUARE_MASK as u32) as u8)
+        unsafe { Square::new_unchecked(((self.0 >> 6) & Square::SQUARE_MASK as u32) as u8) }
     }
 
     #[inline(always)]
     pub fn to_square(&self) -> Square {
-        Square::new((self.0 & Square::SQUARE_MASK as u32) as u8)
+        unsafe { Square::new_unchecked((self.0 & Square::SQUARE_MASK as u32) as u8) }
     }
 
     #[inline(always)]

@@ -959,7 +959,7 @@ impl ChessBoard {
     pub fn is_synchronized(&self) -> bool {
         for i in 0..64 {
             let piece: Option<Piece> = self.board[i];
-            let sq: Square = Square::new(i as u8);
+            let sq: Square = unsafe { Square::new_unchecked(i as u8) };
 
             match piece {
                 Some(p) => {
@@ -1020,7 +1020,7 @@ impl Display for ChessBoard {
         for row in (0..8).rev() {
             for col in 0..8 {
                 let index: u8 = row * 8 + col;
-                let square: Square = Square::new(index);
+                let square: Square = unsafe { Square::new_unchecked(index) };
 
                 let piece: Option<Piece> = self.get_piece_at(square);
 
