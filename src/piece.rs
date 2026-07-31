@@ -1,5 +1,8 @@
 use core::ops::Not;
 
+use crate::bitboard::{Bitboard, RANK_1, RANK_3, RANK_6, RANK_8};
+use crate::square::Square;
+
 /// Bit layout:
 /// `[4 free][1 color][3 kind]`
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -98,5 +101,55 @@ impl Not for Color {
             Self::White => Self::Black,
             Self::Black => Self::White,
         }
+    }
+}
+
+pub trait PawnDirections {
+    const COLOR: Color;
+    const ONCE_PUSH_RANK: Bitboard;
+    const PROMOTION_RANK: Bitboard;
+    const LEFT_ATTACKS_OFFSET: u8;
+    const RIGHT_ATTACKS_OFFSET: u8;
+
+    fn shift_bitboard(bitboard: Bitboard, value: u8) -> Bitboard;
+    fn offest_square(square: Square, offset: u8) -> Square;
+}
+
+pub struct WhitePawnDirections;
+
+impl PawnDirections for WhitePawnDirections {
+    const COLOR: Color = Color::White;
+    const ONCE_PUSH_RANK: Bitboard = RANK_3;
+    const PROMOTION_RANK: Bitboard = RANK_8;
+    const LEFT_ATTACKS_OFFSET: u8 = 7;
+    const RIGHT_ATTACKS_OFFSET: u8 = 9;
+
+    #[inline(always)]
+    fn shift_bitboard(bitboard: Bitboard, value: u8) -> Bitboard {
+        bitboard << value
+    }
+
+    #[inline(always)]
+    fn offest_square(square: Square, offset: u8) -> Square {
+        square - offset
+    }
+}
+pub struct BlackPawnDirections;
+
+impl PawnDirections for BlackPawnDirections {
+    const COLOR: Color = Color::Black;
+    const ONCE_PUSH_RANK: Bitboard = RANK_6;
+    const PROMOTION_RANK: Bitboard = RANK_1;
+    const LEFT_ATTACKS_OFFSET: u8 = 9;
+    const RIGHT_ATTACKS_OFFSET: u8 = 7;
+
+    #[inline(always)]
+    fn shift_bitboard(bitboard: Bitboard, value: u8) -> Bitboard {
+        bitboard >> value
+    }
+
+    #[inline(always)]
+    fn offest_square(square: Square, offset: u8) -> Square {
+        square + offset
     }
 }

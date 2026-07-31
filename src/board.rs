@@ -6,7 +6,7 @@ use primitive_buffer::Buffer;
 use crate::bitboard::prelude::*;
 use crate::castle::{CastlingFlags, CastlingType};
 use crate::errors::FenParseError;
-use crate::piece::{Color, Kind, Piece};
+use crate::piece::{BlackPawnDirections, Color, Kind, PawnDirections, Piece, WhitePawnDirections};
 use crate::piece_move::{Move, MoveBuilder};
 use crate::square::Square;
 
@@ -352,28 +352,30 @@ impl ChessBoard {
 
     fn generate_pawn_moves(&self, color: Color, move_buffer: MoveBuffer<'_>) {
         match color {
-            Color::White => self.generate_white_pawn_moves(move_buffer),
-            Color::Black => self.generate_black_pawn_moves(move_buffer),
+            Color::White => self.generate_pawn_moves_for_color::<WhitePawnDirections>(move_buffer),
+            Color::Black => self.generate_pawn_moves_for_color::<BlackPawnDirections>(move_buffer),
         }
     }
 
-    #[inline]
-    fn generate_white_pawn_moves(&self, move_buffer: MoveBuffer<'_>) {
-        let pawn_bitboard: Bitboard = self.bitboards[Piece::new(Color::White, Kind::Pawn).to_index()];
-        let opposite_bitboard: Bitboard = self.side_bitboards[Color::Black as usize];
+    fn generate_pawn_moves_for_color<D: PawnDirections>(&self, move_buffer: MoveBuffer<'_>) {
+        let pawn_bitboard: Bitboard = self.bitboards[Piece::new(D::COLOR, Kind::Pawn).to_index()];
+        let opposite_bitboard: Bitboard = self.side_bitboards[!D::COLOR as usize];
 
-        let once_push: Bitboard = (pawn_bitboard << 8) & !self.all_pieces_bitboard;
-        let double_push: Bitboard = ((once_push & RANK_3) << 8) & !self.all_pieces_bitboard;
+        let once_push: Bitboard = D::shift_bitboard(pawn_bitboard, 8) & !self.all_pieces_bitboard;
+        let double_push: Bitboard = D::shift_bitboard(once_push & D::ONCE_PUSH_RANK, 8) & !self.all_pieces_bitboard;
 
-        let left_attacks_mask: Bitboard = (pawn_bitboard & !FILE_A) << 7;
-        let right_attacks_mask: Bitboard = (pawn_bitboard & !FILE_H) << 9;
+        let left_attacks_mask: Bitboard = D::shift_bitboard(pawn_bitboard & !FILE_A, D::LEFT_ATTACKS_OFFSET);
+        let right_attacks_mask: Bitboard = D::shift_bitboard(pawn_bitboard & !FILE_H, D::RIGHT_ATTACKS_OFFSET);
 
         let left_attacks: Bitboard = left_attacks_mask & opposite_bitboard;
         let right_attacks: Bitboard = right_attacks_mask & opposite_bitboard;
 
         // En passant moves
         if let Some(ep_sq) = self.en_passant_square {
-            let attackers: Bitboard = pawn_bitboard & WHITE_PAWN_ATTACKERS_MASKS[usize::from(ep_sq)];
+            let pawn_attackers_mask: Bitboard =
+                unsafe { *PAWN_ATTACKERS_MASKS[D::COLOR as usize].get_unchecked(usize::from(ep_sq)) };
+
+            let attackers: Bitboard = pawn_bitboard & pawn_attackers_mask;
 
             for sq in attackers {
                 move_buffer.push(
@@ -386,40 +388,44 @@ impl ChessBoard {
         }
 
         // Quiet one push moves
-        for sq in once_push & !RANK_8 {
-            move_buffer.push(MoveBuilder::new(sq - 8, sq).build());
+        for sq in once_push & !D::PROMOTION_RANK {
+            move_buffer.push(MoveBuilder::new(D::offest_square(sq, 8), sq).build());
         }
 
         // Quiet one push moves with promotion
-        for sq in once_push & RANK_8 {
+        for sq in once_push & D::PROMOTION_RANK {
             for promotion_type in Kind::PROMOTION_KINDS {
-                move_buffer.push(MoveBuilder::new(sq - 8, sq).with_promotion(promotion_type).build());
+                move_buffer.push(
+                    MoveBuilder::new(D::offest_square(sq, 8), sq)
+                        .with_promotion(promotion_type)
+                        .build(),
+                );
             }
         }
 
         // Quiet double push moves
         for sq in double_push {
-            move_buffer.push(MoveBuilder::new(sq - 16, sq).build());
+            move_buffer.push(MoveBuilder::new(D::offest_square(sq, 16), sq).build());
         }
 
         // Left capture moves
-        for sq in left_attacks & !RANK_8 {
+        for sq in left_attacks & !D::PROMOTION_RANK {
             let captured_type: Option<Kind> = self.get_piece_at(sq).map(|p| p.kind());
 
             move_buffer.push(
-                MoveBuilder::new(sq - 7, sq)
+                MoveBuilder::new(D::offest_square(sq, D::LEFT_ATTACKS_OFFSET), sq)
                     .with_optional_capture(captured_type)
                     .build(),
             );
         }
 
         // Left capture moves with promotion
-        for sq in left_attacks & RANK_8 {
+        for sq in left_attacks & D::PROMOTION_RANK {
             let captured_type: Option<Kind> = self.get_piece_at(sq).map(|p| p.kind());
 
             for promotion_type in Kind::PROMOTION_KINDS {
                 move_buffer.push(
-                    MoveBuilder::new(sq - 7, sq)
+                    MoveBuilder::new(D::offest_square(sq, D::LEFT_ATTACKS_OFFSET), sq)
                         .with_optional_capture(captured_type)
                         .with_promotion(promotion_type)
                         .build(),
@@ -428,119 +434,23 @@ impl ChessBoard {
         }
 
         // Right capture moves
-        for sq in right_attacks & !RANK_8 {
+        for sq in right_attacks & !D::PROMOTION_RANK {
             let captured_type: Option<Kind> = self.get_piece_at(sq).map(|p| p.kind());
 
             move_buffer.push(
-                MoveBuilder::new(sq - 9, sq)
+                MoveBuilder::new(D::offest_square(sq, D::RIGHT_ATTACKS_OFFSET), sq)
                     .with_optional_capture(captured_type)
                     .build(),
             );
         }
 
         // Right capture moves with promotion
-        for sq in right_attacks & RANK_8 {
+        for sq in right_attacks & D::PROMOTION_RANK {
             let captured_type: Option<Kind> = self.get_piece_at(sq).map(|p| p.kind());
 
             for promotion_type in Kind::PROMOTION_KINDS {
                 move_buffer.push(
-                    MoveBuilder::new(sq - 9, sq)
-                        .with_optional_capture(captured_type)
-                        .with_promotion(promotion_type)
-                        .build(),
-                );
-            }
-        }
-    }
-
-    #[inline]
-    fn generate_black_pawn_moves(&self, move_buffer: MoveBuffer<'_>) {
-        let pawn_bitboard: Bitboard = self.bitboards[Piece::new(Color::Black, Kind::Pawn).to_index()];
-        let opposite_bitboard: Bitboard = self.side_bitboards[Color::White as usize];
-
-        let once_push: Bitboard = (pawn_bitboard >> 8) & !self.all_pieces_bitboard;
-        let double_push: Bitboard = ((once_push & RANK_6) >> 8) & !self.all_pieces_bitboard;
-
-        let left_attacks_mask: Bitboard = (pawn_bitboard & !FILE_A) >> 9;
-        let right_attacks_mask: Bitboard = (pawn_bitboard & !FILE_H) >> 7;
-
-        let left_attacks: Bitboard = left_attacks_mask & opposite_bitboard;
-        let right_attacks: Bitboard = right_attacks_mask & opposite_bitboard;
-
-        // En passant moves
-        if let Some(ep_sq) = self.en_passant_square {
-            let attackers: Bitboard = pawn_bitboard & BLACK_PAWN_ATTACKERS_MASKS[usize::from(ep_sq)];
-
-            for sq in attackers {
-                move_buffer.push(
-                    MoveBuilder::new(sq, ep_sq)
-                        .with_capture(Kind::Pawn)
-                        .with_en_passant()
-                        .build(),
-                );
-            }
-        }
-
-        // Quiet one push moves
-        for sq in once_push & !RANK_1 {
-            move_buffer.push(MoveBuilder::new(sq + 8, sq).build());
-        }
-
-        // Quiet one push moves with promotion
-        for sq in once_push & RANK_1 {
-            for promotion_type in Kind::PROMOTION_KINDS {
-                move_buffer.push(MoveBuilder::new(sq + 8, sq).with_promotion(promotion_type).build());
-            }
-        }
-
-        // Quiet double push moves
-        for sq in double_push {
-            move_buffer.push(MoveBuilder::new(sq + 16, sq).build());
-        }
-
-        // Left capture moves
-        for sq in left_attacks & !RANK_1 {
-            let captured_type: Option<Kind> = self.get_piece_at(sq).map(|p| p.kind());
-
-            move_buffer.push(
-                MoveBuilder::new(sq + 9, sq)
-                    .with_optional_capture(captured_type)
-                    .build(),
-            );
-        }
-
-        // Left capture moves with promotion
-        for sq in left_attacks & RANK_1 {
-            let captured_type: Option<Kind> = self.get_piece_at(sq).map(|p| p.kind());
-
-            for promotion_type in Kind::PROMOTION_KINDS {
-                move_buffer.push(
-                    MoveBuilder::new(sq + 9, sq)
-                        .with_optional_capture(captured_type)
-                        .with_promotion(promotion_type)
-                        .build(),
-                );
-            }
-        }
-
-        // Right capture moves
-        for sq in right_attacks & !RANK_1 {
-            let captured_type: Option<Kind> = self.get_piece_at(sq).map(|p| p.kind());
-
-            move_buffer.push(
-                MoveBuilder::new(sq + 7, sq)
-                    .with_optional_capture(captured_type)
-                    .build(),
-            );
-        }
-
-        // Right capture moves with promotion
-        for sq in right_attacks & RANK_1 {
-            let captured_type: Option<Kind> = self.get_piece_at(sq).map(|p| p.kind());
-
-            for promotion_type in Kind::PROMOTION_KINDS {
-                move_buffer.push(
-                    MoveBuilder::new(sq + 7, sq)
+                    MoveBuilder::new(D::offest_square(sq, D::RIGHT_ATTACKS_OFFSET), sq)
                         .with_optional_capture(captured_type)
                         .with_promotion(promotion_type)
                         .build(),
