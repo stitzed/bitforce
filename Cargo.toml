@@ -4,9 +4,14 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+criterion = "0.8.2"
 derive_more = { version = "2.1.1", features = ["into"] }
 primitive-buffer = "0.1.0"
 thiserror = "2.0.18"
 
 [profile.test]
 inherits = "release"
+
+[[bench]]
+name = "nps"
+harness = false
