@@ -42,7 +42,7 @@ pub struct ChessBoard {
     /// `[ALL_W, ALL_B]`
     side_bitboards: [Bitboard; 2],
     all_pieces_bitboard: Bitboard,
-    undo_info_stack: Buffer<UndoInfo, MOVE_BUFFER_LEN>,
+    undo_info_stack: Buffer<UndoInfo, MOVE_HISTORY_BUFFER_LEN>,
 }
 
 impl ChessBoard {
