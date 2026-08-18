@@ -54,6 +54,8 @@ impl Kind {
         Self::King,
     ];
 
+    const KIND_VALUES: [i32; 6] = [100, 300, 320, 500, 900, 0];
+
     pub const PROMOTION_KINDS: [Self; 4] = [Self::Knight, Self::Bishop, Self::Rook, Self::Queen];
 
     const START_ROW_MASKS: [u64; 6] = [
@@ -75,6 +77,11 @@ impl Kind {
     #[inline(always)]
     pub fn start_row_mask(&self) -> u64 {
         Self::START_ROW_MASKS[*self as usize]
+    }
+
+    #[inline(always)]
+    pub fn value(&self) -> i32 {
+        Self::KIND_VALUES[*self as usize]
     }
 }
 
