@@ -30,7 +30,7 @@ struct UndoInfo {
 }
 
 pub struct ChessBoard {
-    pub current_turn: Color,
+    current_turn: Color,
     history_of_moves: Buffer<Move, MOVE_HISTORY_BUFFER_LEN>,
     castling_flags: CastlingFlags,
     en_passant_square: Option<Square>,
@@ -317,6 +317,16 @@ impl ChessBoard {
     #[inline(always)]
     pub fn get_piece_at_mut(&mut self, square: Square) -> &mut Option<Piece> {
         unsafe { self.board.get_unchecked_mut(usize::from(square)) }
+    }
+
+    #[inline(always)]
+    pub fn current_turn(&self) -> Color {
+        self.current_turn
+    }
+
+    #[inline(always)]
+    pub fn bitboard(&self, piece: Piece) -> Bitboard {
+        self.bitboards[piece.to_index()]
     }
 
     #[inline(always)]
