@@ -150,6 +150,11 @@ impl Bitboard {
     pub fn last_square_unchecked(&self) -> Square {
         unsafe { Square::new_unchecked(63 - self.0.leading_zeros() as u8) }
     }
+
+    #[inline(always)]
+    pub fn count_squares(&self) -> u32 {
+        self.0.count_ones()
+    }
 }
 
 impl BitAnd for Bitboard {
