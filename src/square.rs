@@ -19,6 +19,8 @@ impl Square {
         if index < 64 { Some(Self(index)) } else { None }
     }
 
+    /// # Safety
+    /// `index` must be in 0..64 range
     #[inline(always)]
     pub const unsafe fn new_unchecked(index: u8) -> Self {
         Self(index)
