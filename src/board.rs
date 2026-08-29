@@ -24,6 +24,7 @@ type MoveBuffer<'a> = &'a mut Buffer<Move, MOVE_BUFFER_LEN>;
 
 #[derive(Clone, Copy)]
 struct UndoInfo {
+    captured_type: Option<Kind>,
     castling_flags: CastlingFlags,
     en_passant_square: Option<Square>,
     fifty_move_counter: u8,
@@ -388,12 +389,7 @@ impl ChessBoard {
             let attackers: Bitboard = pawn_bitboard & pawn_attackers_mask;
 
             for sq in attackers {
-                move_buffer.push(
-                    MoveBuilder::new(sq, ep_sq)
-                        .with_capture(Kind::Pawn)
-                        .with_en_passant()
-                        .build(),
-                );
+                move_buffer.push(MoveBuilder::new(sq, ep_sq).with_capture().with_en_passant().build());
             }
         }
 
@@ -420,23 +416,19 @@ impl ChessBoard {
 
         // Left capture moves
         for sq in left_attacks & !D::PROMOTION_RANK {
-            let captured_type: Option<Kind> = self.get_piece_at(sq).map(|p| p.kind());
-
             move_buffer.push(
                 MoveBuilder::new(D::offest_square(sq, D::LEFT_ATTACKS_OFFSET), sq)
-                    .with_optional_capture(captured_type)
+                    .with_capture()
                     .build(),
             );
         }
 
         // Left capture moves with promotion
         for sq in left_attacks & D::PROMOTION_RANK {
-            let captured_type: Option<Kind> = self.get_piece_at(sq).map(|p| p.kind());
-
             for promotion_type in Kind::PROMOTION_KINDS {
                 move_buffer.push(
                     MoveBuilder::new(D::offest_square(sq, D::LEFT_ATTACKS_OFFSET), sq)
-                        .with_optional_capture(captured_type)
+                        .with_capture()
                         .with_promotion(promotion_type)
                         .build(),
                 );
@@ -445,23 +437,19 @@ impl ChessBoard {
 
         // Right capture moves
         for sq in right_attacks & !D::PROMOTION_RANK {
-            let captured_type: Option<Kind> = self.get_piece_at(sq).map(|p| p.kind());
-
             move_buffer.push(
                 MoveBuilder::new(D::offest_square(sq, D::RIGHT_ATTACKS_OFFSET), sq)
-                    .with_optional_capture(captured_type)
+                    .with_capture()
                     .build(),
             );
         }
 
         // Right capture moves with promotion
         for sq in right_attacks & D::PROMOTION_RANK {
-            let captured_type: Option<Kind> = self.get_piece_at(sq).map(|p| p.kind());
-
             for promotion_type in Kind::PROMOTION_KINDS {
                 move_buffer.push(
                     MoveBuilder::new(D::offest_square(sq, D::RIGHT_ATTACKS_OFFSET), sq)
-                        .with_optional_capture(captured_type)
+                        .with_capture()
                         .with_promotion(promotion_type)
                         .build(),
                 );
@@ -490,13 +478,7 @@ impl ChessBoard {
             let capture_squares: Bitboard = piece_mask & self.side_bitboards[(!color) as usize];
 
             for cap_sq in capture_squares {
-                let captured_type: Option<Kind> = self.get_piece_at(cap_sq).map(|p| p.kind());
-
-                move_buffer.push(
-                    MoveBuilder::new(sq, cap_sq)
-                        .with_optional_capture(captured_type)
-                        .build(),
-                );
+                move_buffer.push(MoveBuilder::new(sq, cap_sq).with_capture().build());
             }
         }
     }
@@ -550,13 +532,7 @@ impl ChessBoard {
             let capture_squares: Bitboard = sliding_attacks & self.side_bitboards[(!color) as usize];
 
             for cap_sq in capture_squares {
-                let captured_type: Option<Kind> = self.get_piece_at(cap_sq).map(|p| p.kind());
-
-                move_buffer.push(
-                    MoveBuilder::new(sq, cap_sq)
-                        .with_optional_capture(captured_type)
-                        .build(),
-                );
+                move_buffer.push(MoveBuilder::new(sq, cap_sq).with_capture().build());
             }
         }
     }
@@ -576,13 +552,7 @@ impl ChessBoard {
             let capture_squares: Bitboard = sliding_attacks & self.side_bitboards[(!color) as usize];
 
             for cap_sq in capture_squares {
-                let captured_type: Option<Kind> = self.get_piece_at(cap_sq).map(|p| p.kind());
-
-                move_buffer.push(
-                    MoveBuilder::new(sq, cap_sq)
-                        .with_optional_capture(captured_type)
-                        .build(),
-                );
+                move_buffer.push(MoveBuilder::new(sq, cap_sq).with_capture().build());
             }
         }
     }
@@ -713,26 +683,25 @@ impl ChessBoard {
             Color::Black => to_square + 8,
         };
 
-        let undo_info: UndoInfo = UndoInfo {
-            castling_flags: self.castling_flags,
-            en_passant_square: self.en_passant_square,
-            fifty_move_counter: self.fifty_move_counter,
-        };
-
-        self.undo_info_stack.push(undo_info);
-
         self.clear_piece(target_piece, from_square);
 
-        if let Some(captured_type) = piece_move.captured_type() {
-            let square: Square = if piece_move.is_en_passant() {
-                en_passant_square
+        let mut captured_type: Option<Kind> = None;
+
+        if piece_move.is_capture() {
+            let (square, kind) = if piece_move.is_en_passant() {
+                (en_passant_square, Kind::Pawn)
             } else {
-                to_square
+                // SAFETY: `is_capture()` guarantees a piece exists at `to_square`
+                // based on bitboard validation.
+                let kind: Kind = unsafe { self.get_piece_at(to_square).unwrap_unchecked().kind() };
+                (to_square, kind)
             };
 
-            let opposite_piece: Piece = Piece::new(!target_piece_color, captured_type);
+            let opposite_piece: Piece = Piece::new(!target_piece_color, kind);
 
             self.clear_piece(opposite_piece, square);
+
+            captured_type = Some(kind);
         }
 
         self.set_piece(target_piece, to_square);
@@ -755,6 +724,15 @@ impl ChessBoard {
 
             *self.get_piece_at_mut(castling_type.rook_start_square() + color_shift) = None;
         }
+
+        let undo_info: UndoInfo = UndoInfo {
+            captured_type,
+            castling_flags: self.castling_flags,
+            en_passant_square: self.en_passant_square,
+            fifty_move_counter: self.fifty_move_counter,
+        };
+
+        self.undo_info_stack.push(undo_info);
 
         let is_king_moved: bool = target_piece.kind() == Kind::King;
 
@@ -782,7 +760,7 @@ impl ChessBoard {
             target_piece.kind() == Kind::Pawn && u8::from(to_square) ^ u8::from(from_square) == 16;
         self.en_passant_square = is_double_push.then_some(en_passant_square);
 
-        let reset_mask: bool = !(target_piece.kind() == Kind::Pawn || piece_move.captured_type().is_some());
+        let reset_mask: bool = !(target_piece.kind() == Kind::Pawn || piece_move.is_capture());
         self.fifty_move_counter = (self.fifty_move_counter + 1) * reset_mask as u8;
 
         self.fullmove_number += self.current_turn as u16;
@@ -811,7 +789,7 @@ impl ChessBoard {
         self.clear_piece(target_piece, to_square);
         self.set_piece(target_piece, from_square);
 
-        if let Some(captured_type) = piece_move.captured_type() {
+        if let Some(captured_type) = undo_info.captured_type {
             let square: Square = if piece_move.is_en_passant() {
                 match target_piece_color {
                     Color::White => to_square - 8,
