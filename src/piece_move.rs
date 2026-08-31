@@ -100,7 +100,7 @@ pub struct MoveBuilder(u32);
 impl MoveBuilder {
     #[inline(always)]
     pub fn new(from_square: Square, to_square: Square) -> Self {
-        let mut bits: u32 = 0b0110_0000_0000_0000;
+        let mut bits: u32 = (Kind::NONE_VALUE as u32) << 12;
         bits |= (u32::from(from_square)) << 6;
         bits |= u32::from(to_square);
         Self(bits)

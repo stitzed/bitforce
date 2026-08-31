@@ -15,8 +15,8 @@ pub struct CastlingXorMasks {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u8)]
 pub enum CastlingType {
-    Kingside = 1,
-    Queenside = 2,
+    Kingside = 0b01,
+    Queenside = 0b10,
 }
 
 impl CastlingType {
