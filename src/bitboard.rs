@@ -5,9 +5,8 @@ use crate::square::Square;
 
 pub mod prelude {
     pub use crate::bitboard::{
-        ANTI_DIAGONAL_LINES, BISHOP_RAYS_MASKS, BLACK_PAWN_ATTACKERS_MASKS, Bitboard, DIAGONAL_LINES, FILE_A, FILE_H,
-        FILE_LINES, KING_MASKS, KNIGHT_MASKS, PAWN_ATTACKERS_MASKS, RANKS_ATTACKS, ROOK_RAYS_MASKS,
-        WHITE_PAWN_ATTACKERS_MASKS,
+        ANTI_DIAGONAL_LINES, BLACK_PAWN_ATTACKERS_MASKS, Bitboard, DIAGONAL_LINES, FILE_A, FILE_H, FILE_LINES,
+        KING_MASKS, KNIGHT_MASKS, PAWN_ATTACKERS_MASKS, RANKS_ATTACKS, WHITE_PAWN_ATTACKERS_MASKS,
     };
 }
 
@@ -38,59 +37,6 @@ const fn generate_masks(offsets: &[(i8, i8)]) -> [Bitboard; 64] {
         masks[i] = Bitboard::new(mask);
 
         i += 1;
-    }
-
-    masks
-}
-
-const fn generate_rays_masks<const N: usize>(offsets: &[(i8, i8)]) -> [[Bitboard; N]; 64] {
-    let mut masks_raw: [[u64; N]; 64] = [[0; N]; 64];
-
-    let mut i: usize = 0;
-
-    while i < 64 {
-        let mut rays_raw: [u64; N] = [0; N];
-
-        let sq: Square = unsafe { Square::new_unchecked(i as u8) };
-        let (row, col) = (sq.row(), sq.col());
-
-        let mut arr_ptr: usize = 0;
-
-        while arr_ptr < offsets.len() {
-            let piece_offset: (i8, i8) = offsets[arr_ptr];
-
-            let mut delta_row: i8 = row as i8 + piece_offset.0;
-            let mut delta_col: i8 = col as i8 + piece_offset.1;
-
-            while (delta_row >= 0 && delta_row < 8) && (delta_col >= 0 && delta_col < 8) {
-                rays_raw[arr_ptr] |= Square::from_coords(delta_row as u8, delta_col as u8).to_bitboard_mask();
-
-                delta_row += piece_offset.0;
-                delta_col += piece_offset.1;
-            }
-
-            arr_ptr += 1;
-        }
-
-        masks_raw[i] = rays_raw;
-
-        i += 1;
-    }
-
-    let mut masks: [[Bitboard; N]; 64] = [[Bitboard::new(0); N]; 64];
-
-    let mut sq: usize = 0;
-
-    while sq < 64 {
-        let mut ray: usize = 0;
-
-        while ray < offsets.len() {
-            masks[sq][ray] = Bitboard::new(masks_raw[sq][ray]);
-
-            ray += 1;
-        }
-
-        sq += 1;
     }
 
     masks
@@ -196,15 +142,11 @@ pub const RANKS_ATTACKS: [[u8; 8]; 256] = generate_ranks_attacks();
 const WHITE_PAWN_ATTACKERS_OFFSETS: [(i8, i8); 2] = [(-1, -1), (-1, 1)];
 const BLACK_PAWN_ATTACKERS_OFFSETS: [(i8, i8); 2] = [(1, -1), (1, 1)];
 const KNIGHT_OFFSETS: [(i8, i8); 8] = [(-2, -1), (-2, 1), (-1, -2), (-1, 2), (1, -2), (1, 2), (2, -1), (2, 1)];
-const BISHOP_OFFSETS: [(i8, i8); 4] = [(1, 1), (1, -1), (-1, 1), (-1, -1)];
-const ROOK_OFFSETS: [(i8, i8); 4] = [(1, 0), (0, 1), (0, -1), (-1, 0)];
 const KING_OFFSETS: [(i8, i8); 8] = [(-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)];
 
 pub const WHITE_PAWN_ATTACKERS_MASKS: [Bitboard; 64] = generate_masks(&WHITE_PAWN_ATTACKERS_OFFSETS);
 pub const BLACK_PAWN_ATTACKERS_MASKS: [Bitboard; 64] = generate_masks(&BLACK_PAWN_ATTACKERS_OFFSETS);
 pub const KNIGHT_MASKS: [Bitboard; 64] = generate_masks(&KNIGHT_OFFSETS);
-pub const BISHOP_RAYS_MASKS: [[Bitboard; 4]; 64] = generate_rays_masks(&BISHOP_OFFSETS);
-pub const ROOK_RAYS_MASKS: [[Bitboard; 4]; 64] = generate_rays_masks(&ROOK_OFFSETS);
 pub const KING_MASKS: [Bitboard; 64] = generate_masks(&KING_OFFSETS);
 
 pub const PAWN_ATTACKERS_MASKS: [[Bitboard; 64]; 2] = [WHITE_PAWN_ATTACKERS_MASKS, BLACK_PAWN_ATTACKERS_MASKS];
@@ -242,11 +184,6 @@ impl Bitboard {
     #[inline(always)]
     pub fn first_square_unchecked(&self) -> Square {
         unsafe { Square::new_unchecked(self.0.trailing_zeros() as u8) }
-    }
-
-    #[inline(always)]
-    pub fn last_square_unchecked(&self) -> Square {
-        unsafe { Square::new_unchecked(63 - self.0.leading_zeros() as u8) }
     }
 
     #[inline(always)]
