@@ -1,12 +1,13 @@
 use core::fmt::Display;
-use core::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Not, Shl, Shr};
+use core::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Not, Shl, Shr, Sub};
 
 use crate::square::Square;
 
 pub mod prelude {
     pub use crate::bitboard::{
-        BISHOP_RAYS_MASKS, BLACK_PAWN_ATTACKERS_MASKS, Bitboard, FILE_A, FILE_H, KING_MASKS, KNIGHT_MASKS,
-        PAWN_ATTACKERS_MASKS, ROOK_RAYS_MASKS, WHITE_PAWN_ATTACKERS_MASKS,
+        ANTI_DIAGONAL_LINES, BISHOP_RAYS_MASKS, BLACK_PAWN_ATTACKERS_MASKS, Bitboard, DIAGONAL_LINES, FILE_A, FILE_H,
+        FILE_LINES, KING_MASKS, KNIGHT_MASKS, PAWN_ATTACKERS_MASKS, RANKS_ATTACKS, ROOK_RAYS_MASKS,
+        WHITE_PAWN_ATTACKERS_MASKS,
     };
 }
 
@@ -94,6 +95,103 @@ const fn generate_rays_masks<const N: usize>(offsets: &[(i8, i8)]) -> [[Bitboard
 
     masks
 }
+
+const fn generate_lines_masks(positive_offset: (i8, i8), negative_offset: (i8, i8)) -> [Bitboard; 64] {
+    let mut masks: [Bitboard; 64] = [Bitboard::new(0); 64];
+
+    let mut i: usize = 0;
+
+    while i < 64 {
+        let sq: Square = unsafe { Square::new_unchecked(i as u8) };
+        let (row, col) = (sq.row(), sq.col());
+
+        let mut mask: u64 = sq.to_bitboard_mask();
+
+        let mut pos_delta_row: i8 = row as i8 + positive_offset.0;
+        let mut pos_delta_col: i8 = col as i8 + positive_offset.1;
+
+        while (pos_delta_row >= 0 && pos_delta_row < 8) && (pos_delta_col >= 0 && pos_delta_col < 8) {
+            mask |= Square::from_coords(pos_delta_row as u8, pos_delta_col as u8).to_bitboard_mask();
+
+            pos_delta_row += positive_offset.0;
+            pos_delta_col += positive_offset.1;
+        }
+
+        let mut neg_delta_row: i8 = row as i8 + negative_offset.0;
+        let mut neg_delta_col: i8 = col as i8 + negative_offset.1;
+
+        while (neg_delta_row >= 0 && neg_delta_row < 8) && (neg_delta_col >= 0 && neg_delta_col < 8) {
+            mask |= Square::from_coords(neg_delta_row as u8, neg_delta_col as u8).to_bitboard_mask();
+
+            neg_delta_row += negative_offset.0;
+            neg_delta_col += negative_offset.1;
+        }
+
+        masks[i] = Bitboard::new(mask);
+
+        i += 1;
+    }
+
+    masks
+}
+
+const fn generate_ranks_attacks() -> [[u8; 8]; 256] {
+    let mut masks: [[u8; 8]; 256] = [[0; 8]; 256];
+
+    let mut rank: usize = 0;
+
+    while rank < 256 {
+        let mut slider: u8 = 0;
+
+        while slider < 8 {
+            let mut attacks: u8 = 0;
+
+            let mut byte_ptr: u8 = slider;
+
+            while byte_ptr > 0 {
+                byte_ptr -= 1;
+
+                let mask: u8 = 1 << byte_ptr;
+
+                if rank as u8 & mask == 0 {
+                    attacks |= mask;
+                } else {
+                    attacks |= mask;
+                    break;
+                }
+            }
+
+            byte_ptr = slider;
+
+            while byte_ptr < 7 {
+                byte_ptr += 1;
+
+                let mask: u8 = 1 << byte_ptr;
+
+                if rank as u8 & mask == 0 {
+                    attacks |= mask;
+                } else {
+                    attacks |= mask;
+                    break;
+                }
+            }
+
+            masks[rank][slider as usize] = attacks;
+
+            slider += 1;
+        }
+
+        rank += 1;
+    }
+
+    masks
+}
+
+pub const FILE_LINES: [Bitboard; 64] = generate_lines_masks((1, 0), (-1, 0));
+pub const DIAGONAL_LINES: [Bitboard; 64] = generate_lines_masks((1, 1), (-1, -1));
+pub const ANTI_DIAGONAL_LINES: [Bitboard; 64] = generate_lines_masks((-1, 1), (1, -1));
+
+pub const RANKS_ATTACKS: [[u8; 8]; 256] = generate_ranks_attacks();
 
 const WHITE_PAWN_ATTACKERS_OFFSETS: [(i8, i8); 2] = [(-1, -1), (-1, 1)];
 const BLACK_PAWN_ATTACKERS_OFFSETS: [(i8, i8); 2] = [(1, -1), (1, 1)];
