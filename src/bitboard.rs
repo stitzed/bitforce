@@ -155,6 +155,11 @@ impl Bitboard {
     pub fn count_squares(&self) -> u32 {
         self.0.count_ones()
     }
+
+    #[inline(always)]
+    pub fn swap_ranks(&self) -> Bitboard {
+        Self(self.0.swap_bytes())
+    }
 }
 
 impl BitAnd for Bitboard {
@@ -220,6 +225,20 @@ impl BitXor for Bitboard {
 impl BitXorAssign for Bitboard {
     fn bitxor_assign(&mut self, rhs: Self) {
         self.0 ^= rhs.0
+    }
+}
+
+impl Sub for Bitboard {
+    type Output = Self;
+
+    fn sub(self, rhs: Self) -> Self::Output {
+        Self(self.0.wrapping_sub(rhs.0))
+    }
+}
+
+impl From<Bitboard> for usize {
+    fn from(value: Bitboard) -> Self {
+        value.0 as usize
     }
 }
 
