@@ -351,8 +351,8 @@ impl ChessBoard {
             match kind {
                 Kind::Pawn => self.generate_pawn_moves(color, move_buffer),
                 Kind::Knight => self.generate_static_moves(color, kind, KNIGHT_MASKS, move_buffer),
-                Kind::Bishop => self.generate_sliding_moves(color, kind, &BISHOP_RAYS_MASKS, move_buffer),
-                Kind::Rook => self.generate_sliding_moves(color, kind, &ROOK_RAYS_MASKS, move_buffer),
+                Kind::Bishop => self.generate_bishop_moves(color, move_buffer),
+                Kind::Rook => self.generate_rook_moves(color, move_buffer),
                 Kind::Queen => self.generate_queen_moves(color, move_buffer),
                 Kind::King => self.generate_king_moves(color, move_buffer),
             }
@@ -483,53 +483,50 @@ impl ChessBoard {
         }
     }
 
-    fn get_sliding_attacks(&self, square: Square, rays_masks: &[[Bitboard; 4]; 64]) -> Bitboard {
-        let mut attacks: Bitboard = Bitboard::new(0);
+    fn hyperbola_quintessence_attacks(&self, square: Square, line_masks: &[Bitboard; 64]) -> Bitboard {
+        let mask: Bitboard = unsafe { *line_masks.get_unchecked(usize::from(square)) };
+        let line: Bitboard = self.all_pieces_bitboard & mask;
+        let slider: Bitboard = Bitboard::new(square.to_bitboard_mask());
 
-        let rays: &[Bitboard; 4] = unsafe { rays_masks.get_unchecked(usize::from(square)) };
+        let forward: Bitboard = (line - (slider << 1)) ^ line;
+        let reverse: Bitboard = ((line.swap_ranks() - (slider.swap_ranks() << 1)) ^ line.swap_ranks()).swap_ranks();
 
-        for (i, &ray) in rays.iter().enumerate() {
-            let bitboard_ray: Bitboard = self.all_pieces_bitboard & ray;
-
-            if bitboard_ray.is_empty() {
-                attacks |= ray;
-                continue;
-            }
-
-            let blocker_path: Bitboard = if i < 2 {
-                let sq: u8 = u8::from(bitboard_ray.first_square_unchecked());
-                let mask: u64 = 1u64.checked_shl((sq + 1) as u32).map(|v| v - 1).unwrap_or(u64::MAX);
-
-                Bitboard::new(mask)
-            } else {
-                Bitboard::new(!((1u64 << u8::from(bitboard_ray.last_square_unchecked())) - 1))
-            };
-
-            attacks |= ray & blocker_path;
-        }
-
-        attacks
+        (forward | reverse) & mask
     }
 
-    fn generate_sliding_moves(
-        &self,
-        color: Color,
-        kind: Kind,
-        rays_masks: &[[Bitboard; 4]; 64],
-        move_buffer: MoveBuffer<'_>,
-    ) {
-        let piece_bitboard: Bitboard = self.bitboards[Piece::new(color, kind).to_index()];
+    fn generate_bishop_moves(&self, color: Color, move_buffer: MoveBuffer<'_>) {
+        let piece_bitboard: Bitboard = self.bitboards[Piece::new(color, Kind::Bishop).to_index()];
 
         for sq in piece_bitboard {
-            let sliding_attacks: Bitboard = self.get_sliding_attacks(sq, rays_masks);
+            let attacks: Bitboard = self.get_bishop_attacks(sq);
 
-            let quiet_squares: Bitboard = sliding_attacks & !self.all_pieces_bitboard;
+            let quiet_squares: Bitboard = attacks & !self.all_pieces_bitboard;
 
             for quiet_sq in quiet_squares {
                 move_buffer.push(MoveBuilder::new(sq, quiet_sq).build());
             }
 
-            let capture_squares: Bitboard = sliding_attacks & self.side_bitboards[(!color) as usize];
+            let capture_squares: Bitboard = attacks & self.side_bitboards[(!color) as usize];
+
+            for cap_sq in capture_squares {
+                move_buffer.push(MoveBuilder::new(sq, cap_sq).with_capture().build());
+            }
+        }
+    }
+
+    fn generate_rook_moves(&self, color: Color, move_buffer: MoveBuffer<'_>) {
+        let piece_bitboard: Bitboard = self.bitboards[Piece::new(color, Kind::Rook).to_index()];
+
+        for sq in piece_bitboard {
+            let attacks: Bitboard = self.get_rook_attacks(sq);
+
+            let quiet_squares: Bitboard = attacks & !self.all_pieces_bitboard;
+
+            for quiet_sq in quiet_squares {
+                move_buffer.push(MoveBuilder::new(sq, quiet_sq).build());
+            }
+
+            let capture_squares: Bitboard = attacks & self.side_bitboards[(!color) as usize];
 
             for cap_sq in capture_squares {
                 move_buffer.push(MoveBuilder::new(sq, cap_sq).with_capture().build());
@@ -605,11 +602,24 @@ impl ChessBoard {
     }
 
     fn get_bishop_attacks(&self, square: Square) -> Bitboard {
-        self.get_sliding_attacks(square, &BISHOP_RAYS_MASKS)
+        self.hyperbola_quintessence_attacks(square, &DIAGONAL_LINES)
+            | self.hyperbola_quintessence_attacks(square, &ANTI_DIAGONAL_LINES)
     }
 
-    fn get_rook_attacks(&self, square: Square) -> Bitboard {
-        self.get_sliding_attacks(square, &ROOK_RAYS_MASKS)
+    pub fn get_rook_attacks(&self, square: Square) -> Bitboard {
+        let row: u8 = square.row();
+        let col: usize = square.col() as usize;
+        let shift_bits: u8 = row * 8;
+
+        let rank_bits: usize = usize::from(self.all_pieces_bitboard >> shift_bits);
+        let index: usize = rank_bits & 0xFF;
+
+        let attack_pattern: u64 = RANKS_ATTACKS[index][col] as u64;
+        let shifted_attack: u64 = attack_pattern << shift_bits;
+
+        let rank_attacks: Bitboard = Bitboard::new(shifted_attack);
+
+        self.hyperbola_quintessence_attacks(square, &FILE_LINES) | rank_attacks
     }
 
     fn get_queen_attacks(&self, square: Square) -> Bitboard {
