@@ -694,6 +694,8 @@ impl ChessBoard {
 
         let mut captured_type: Option<Kind> = None;
 
+        // Order matters: clear the captured piece before setting the moving piece.
+        // Otherwise, on regular captures, `clear_piece` would erase the newly placed piece at `to_square`.
         if piece_move.is_capture() {
             let (square, kind) = if piece_move.is_en_passant() {
                 (en_passant_square, Kind::Pawn)
