@@ -347,13 +347,18 @@ impl ChessBoard {
     }
 
     pub fn generate_pseudo_legal_moves<'a>(&self, color: Color, move_buffer: MoveBuffer<'a>) -> &'a [Move] {
+        let knight_attacks = Self::get_knight_attacks;
+        let bishop_attacks = |sq| self.get_bishop_attacks(sq);
+        let rook_attacks = |sq| self.get_rook_attacks(sq);
+        let queen_attacks = |sq| self.get_queen_attacks(sq);
+
         for kind in Kind::ALL_KINDS {
             match kind {
                 Kind::Pawn => self.generate_pawn_moves(color, move_buffer),
-                Kind::Knight => self.generate_static_moves(color, kind, KNIGHT_MASKS, move_buffer),
-                Kind::Bishop => self.generate_bishop_moves(color, move_buffer),
-                Kind::Rook => self.generate_rook_moves(color, move_buffer),
-                Kind::Queen => self.generate_queen_moves(color, move_buffer),
+                Kind::Knight => self.generate_moves_for_kind(color, kind, knight_attacks, move_buffer),
+                Kind::Bishop => self.generate_moves_for_kind(color, kind, bishop_attacks, move_buffer),
+                Kind::Rook => self.generate_moves_for_kind(color, kind, rook_attacks, move_buffer),
+                Kind::Queen => self.generate_moves_for_kind(color, kind, queen_attacks, move_buffer),
                 Kind::King => self.generate_king_moves(color, move_buffer),
             }
         }
@@ -457,25 +462,22 @@ impl ChessBoard {
         }
     }
 
-    fn generate_static_moves(
-        &self,
-        color: Color,
-        kind: Kind,
-        piece_masks: [Bitboard; 64],
-        move_buffer: MoveBuffer<'_>,
-    ) {
+    fn generate_moves_for_kind<F>(&self, color: Color, kind: Kind, get_attacks: F, move_buffer: MoveBuffer<'_>)
+    where
+        F: Fn(Square) -> Bitboard,
+    {
         let piece_bitboard: Bitboard = self.bitboards[Piece::new(color, kind).to_index()];
 
         for sq in piece_bitboard {
-            let piece_mask: Bitboard = piece_masks[usize::from(sq)];
+            let attacks: Bitboard = get_attacks(sq);
 
-            let quiet_squares: Bitboard = piece_mask & !self.all_pieces_bitboard;
+            let quiet_squares: Bitboard = attacks & !self.all_pieces_bitboard;
 
             for quiet_sq in quiet_squares {
                 move_buffer.push(MoveBuilder::new(sq, quiet_sq).build());
             }
 
-            let capture_squares: Bitboard = piece_mask & self.side_bitboards[(!color) as usize];
+            let capture_squares: Bitboard = attacks & self.side_bitboards[(!color) as usize];
 
             for cap_sq in capture_squares {
                 move_buffer.push(MoveBuilder::new(sq, cap_sq).with_capture().build());
@@ -494,68 +496,8 @@ impl ChessBoard {
         (forward | reverse) & mask
     }
 
-    fn generate_bishop_moves(&self, color: Color, move_buffer: MoveBuffer<'_>) {
-        let piece_bitboard: Bitboard = self.bitboards[Piece::new(color, Kind::Bishop).to_index()];
-
-        for sq in piece_bitboard {
-            let attacks: Bitboard = self.get_bishop_attacks(sq);
-
-            let quiet_squares: Bitboard = attacks & !self.all_pieces_bitboard;
-
-            for quiet_sq in quiet_squares {
-                move_buffer.push(MoveBuilder::new(sq, quiet_sq).build());
-            }
-
-            let capture_squares: Bitboard = attacks & self.side_bitboards[(!color) as usize];
-
-            for cap_sq in capture_squares {
-                move_buffer.push(MoveBuilder::new(sq, cap_sq).with_capture().build());
-            }
-        }
-    }
-
-    fn generate_rook_moves(&self, color: Color, move_buffer: MoveBuffer<'_>) {
-        let piece_bitboard: Bitboard = self.bitboards[Piece::new(color, Kind::Rook).to_index()];
-
-        for sq in piece_bitboard {
-            let attacks: Bitboard = self.get_rook_attacks(sq);
-
-            let quiet_squares: Bitboard = attacks & !self.all_pieces_bitboard;
-
-            for quiet_sq in quiet_squares {
-                move_buffer.push(MoveBuilder::new(sq, quiet_sq).build());
-            }
-
-            let capture_squares: Bitboard = attacks & self.side_bitboards[(!color) as usize];
-
-            for cap_sq in capture_squares {
-                move_buffer.push(MoveBuilder::new(sq, cap_sq).with_capture().build());
-            }
-        }
-    }
-
-    fn generate_queen_moves(&self, color: Color, move_buffer: MoveBuffer<'_>) {
-        let piece_bitboard: Bitboard = self.bitboards[Piece::new(color, Kind::Queen).to_index()];
-
-        for sq in piece_bitboard {
-            let sliding_attacks: Bitboard = self.get_queen_attacks(sq);
-
-            let quiet_squares: Bitboard = sliding_attacks & !self.all_pieces_bitboard;
-
-            for quiet_sq in quiet_squares {
-                move_buffer.push(MoveBuilder::new(sq, quiet_sq).build());
-            }
-
-            let capture_squares: Bitboard = sliding_attacks & self.side_bitboards[(!color) as usize];
-
-            for cap_sq in capture_squares {
-                move_buffer.push(MoveBuilder::new(sq, cap_sq).with_capture().build());
-            }
-        }
-    }
-
     fn generate_king_moves(&self, color: Color, move_buffer: MoveBuffer<'_>) {
-        self.generate_static_moves(color, Kind::King, KING_MASKS, move_buffer);
+        self.generate_moves_for_kind(color, Kind::King, Self::get_king_attacks, move_buffer);
 
         let color_shift: u8 = color.shift();
         let castle_square: Square = Square::E1 + color_shift;
