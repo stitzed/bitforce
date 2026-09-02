@@ -632,42 +632,39 @@ impl ChessBoard {
 
     pub fn is_square_attacked(&self, square: Square, opposite_color: Color) -> bool {
         // Pawn
-        if !(Self::get_pawn_attacks(square, opposite_color)
-            & self.bitboards[Piece::new(opposite_color, Kind::Pawn).to_index()])
-        .is_empty()
-        {
+        let pawn_attacks: Bitboard = Self::get_pawn_attacks(square, opposite_color);
+        let enemy_pawns: Bitboard = self.bitboards[Piece::new(opposite_color, Kind::Pawn).to_index()];
+        if !(pawn_attacks & enemy_pawns).is_empty() {
             return true;
         }
 
         // Knight
-        if !(Self::get_knight_attacks(square) & self.bitboards[Piece::new(opposite_color, Kind::Knight).to_index()])
-            .is_empty()
-        {
+        let knight_attacks: Bitboard = Self::get_knight_attacks(square);
+        let enemy_knights: Bitboard = self.bitboards[Piece::new(opposite_color, Kind::Knight).to_index()];
+        if !(knight_attacks & enemy_knights).is_empty() {
             return true;
         }
 
         // Bishop and Queen
-        if !(self.get_bishop_attacks(square)
-            & (self.bitboards[Piece::new(opposite_color, Kind::Bishop).to_index()]
-                | self.bitboards[Piece::new(opposite_color, Kind::Queen).to_index()]))
-        .is_empty()
-        {
+        let bishop_attacks: Bitboard = self.get_bishop_attacks(square);
+        let enemy_diagonal: Bitboard = self.bitboards[Piece::new(opposite_color, Kind::Bishop).to_index()]
+            | self.bitboards[Piece::new(opposite_color, Kind::Queen).to_index()];
+        if !(bishop_attacks & enemy_diagonal).is_empty() {
             return true;
         }
 
         // Rook and Queen
-        if !(self.get_rook_attacks(square)
-            & (self.bitboards[Piece::new(opposite_color, Kind::Rook).to_index()]
-                | self.bitboards[Piece::new(opposite_color, Kind::Queen).to_index()]))
-        .is_empty()
-        {
+        let rook_attacks: Bitboard = self.get_rook_attacks(square);
+        let enemy_orthogonal: Bitboard = self.bitboards[Piece::new(opposite_color, Kind::Rook).to_index()]
+            | self.bitboards[Piece::new(opposite_color, Kind::Queen).to_index()];
+        if !(rook_attacks & enemy_orthogonal).is_empty() {
             return true;
         }
 
         // King
-        if !(Self::get_king_attacks(square) & self.bitboards[Piece::new(opposite_color, Kind::King).to_index()])
-            .is_empty()
-        {
+        let king_attacks: Bitboard = Self::get_king_attacks(square);
+        let enemy_kings: Bitboard = self.bitboards[Piece::new(opposite_color, Kind::King).to_index()];
+        if !(king_attacks & enemy_kings).is_empty() {
             return true;
         }
 
