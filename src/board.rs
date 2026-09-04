@@ -22,6 +22,64 @@ const MOVE_BUFFER_LEN: usize = 128;
 
 type MoveBuffer<'a> = &'a mut Buffer<Move, MOVE_BUFFER_LEN>;
 
+mod attacks {
+    use crate::bitboard::prelude::*;
+    use crate::piece::Color;
+    use crate::square::Square;
+
+    pub fn hyperbola_quintessence_attacks(
+        square: Square,
+        line_masks: &[Bitboard; 64],
+        occupancy: Bitboard,
+    ) -> Bitboard {
+        let mask: Bitboard = unsafe { *line_masks.get_unchecked(usize::from(square)) };
+        let line: Bitboard = occupancy & mask;
+        let slider: Bitboard = Bitboard::new(square.to_bitboard_mask());
+
+        let forward: Bitboard = (line - (slider << 1)) ^ line;
+        let reverse: Bitboard = ((line.swap_ranks() - (slider.swap_ranks() << 1)) ^ line.swap_ranks()).swap_ranks();
+
+        (forward | reverse) & mask
+    }
+
+    pub fn get_pawn_attacks(square: Square, color: Color) -> Bitboard {
+        unsafe { *PAWN_ATTACKERS_MASKS[color as usize].get_unchecked(usize::from(square)) }
+    }
+
+    pub fn get_knight_attacks(square: Square) -> Bitboard {
+        unsafe { *KNIGHT_MASKS.get_unchecked(usize::from(square)) }
+    }
+
+    pub fn get_bishop_attacks(square: Square, occupancy: Bitboard) -> Bitboard {
+        hyperbola_quintessence_attacks(square, &DIAGONAL_LINES, occupancy)
+            | hyperbola_quintessence_attacks(square, &ANTI_DIAGONAL_LINES, occupancy)
+    }
+
+    pub fn get_rook_attacks(square: Square, occupancy: Bitboard) -> Bitboard {
+        let row: u8 = square.row();
+        let col: usize = square.col() as usize;
+        let shift_bits: u8 = row * 8;
+
+        let rank_bits: usize = usize::from(occupancy >> shift_bits);
+        let index: usize = rank_bits & 0xFF;
+
+        let attack_pattern: u64 = RANKS_ATTACKS[index][col] as u64;
+        let shifted_attack: u64 = attack_pattern << shift_bits;
+
+        let rank_attacks: Bitboard = Bitboard::new(shifted_attack);
+
+        hyperbola_quintessence_attacks(square, &FILE_LINES, occupancy) | rank_attacks
+    }
+
+    pub fn get_queen_attacks(square: Square, occupancy: Bitboard) -> Bitboard {
+        get_bishop_attacks(square, occupancy) | get_rook_attacks(square, occupancy)
+    }
+
+    pub fn get_king_attacks(square: Square) -> Bitboard {
+        unsafe { *KING_MASKS.get_unchecked(usize::from(square)) }
+    }
+}
+
 #[derive(Clone, Copy)]
 struct UndoInfo {
     captured_type: Option<Kind>,
@@ -347,15 +405,14 @@ impl ChessBoard {
     }
 
     pub fn generate_pseudo_legal_moves<'a>(&self, color: Color, move_buffer: MoveBuffer<'a>) -> &'a [Move] {
-        let knight_attacks = Self::get_knight_attacks;
-        let bishop_attacks = |sq| self.get_bishop_attacks(sq);
-        let rook_attacks = |sq| self.get_rook_attacks(sq);
-        let queen_attacks = |sq| self.get_queen_attacks(sq);
+        let bishop_attacks = |sq| attacks::get_bishop_attacks(sq, self.all_pieces_bitboard);
+        let rook_attacks = |sq| attacks::get_rook_attacks(sq, self.all_pieces_bitboard);
+        let queen_attacks = |sq| attacks::get_queen_attacks(sq, self.all_pieces_bitboard);
 
         for kind in Kind::ALL_KINDS {
             match kind {
                 Kind::Pawn => self.generate_pawn_moves(color, move_buffer),
-                Kind::Knight => self.generate_moves_for_kind(color, kind, knight_attacks, move_buffer),
+                Kind::Knight => self.generate_moves_for_kind(color, kind, attacks::get_knight_attacks, move_buffer),
                 Kind::Bishop => self.generate_moves_for_kind(color, kind, bishop_attacks, move_buffer),
                 Kind::Rook => self.generate_moves_for_kind(color, kind, rook_attacks, move_buffer),
                 Kind::Queen => self.generate_moves_for_kind(color, kind, queen_attacks, move_buffer),
@@ -485,19 +542,8 @@ impl ChessBoard {
         }
     }
 
-    fn hyperbola_quintessence_attacks(&self, square: Square, line_masks: &[Bitboard; 64]) -> Bitboard {
-        let mask: Bitboard = unsafe { *line_masks.get_unchecked(usize::from(square)) };
-        let line: Bitboard = self.all_pieces_bitboard & mask;
-        let slider: Bitboard = Bitboard::new(square.to_bitboard_mask());
-
-        let forward: Bitboard = (line - (slider << 1)) ^ line;
-        let reverse: Bitboard = ((line.swap_ranks() - (slider.swap_ranks() << 1)) ^ line.swap_ranks()).swap_ranks();
-
-        (forward | reverse) & mask
-    }
-
     fn generate_king_moves(&self, color: Color, move_buffer: MoveBuffer<'_>) {
-        self.generate_moves_for_kind(color, Kind::King, Self::get_king_attacks, move_buffer);
+        self.generate_moves_for_kind(color, Kind::King, attacks::get_king_attacks, move_buffer);
 
         let color_shift: u8 = color.shift();
         let castle_square: Square = Square::E1 + color_shift;
@@ -535,60 +581,23 @@ impl ChessBoard {
         }
     }
 
-    fn get_pawn_attacks(square: Square, color: Color) -> Bitboard {
-        unsafe { *PAWN_ATTACKERS_MASKS[color as usize].get_unchecked(usize::from(square)) }
-    }
-
-    fn get_knight_attacks(square: Square) -> Bitboard {
-        unsafe { *KNIGHT_MASKS.get_unchecked(usize::from(square)) }
-    }
-
-    fn get_bishop_attacks(&self, square: Square) -> Bitboard {
-        self.hyperbola_quintessence_attacks(square, &DIAGONAL_LINES)
-            | self.hyperbola_quintessence_attacks(square, &ANTI_DIAGONAL_LINES)
-    }
-
-    pub fn get_rook_attacks(&self, square: Square) -> Bitboard {
-        let row: u8 = square.row();
-        let col: usize = square.col() as usize;
-        let shift_bits: u8 = row * 8;
-
-        let rank_bits: usize = usize::from(self.all_pieces_bitboard >> shift_bits);
-        let index: usize = rank_bits & 0xFF;
-
-        let attack_pattern: u64 = RANKS_ATTACKS[index][col] as u64;
-        let shifted_attack: u64 = attack_pattern << shift_bits;
-
-        let rank_attacks: Bitboard = Bitboard::new(shifted_attack);
-
-        self.hyperbola_quintessence_attacks(square, &FILE_LINES) | rank_attacks
-    }
-
-    fn get_queen_attacks(&self, square: Square) -> Bitboard {
-        self.get_bishop_attacks(square) | self.get_rook_attacks(square)
-    }
-
-    fn get_king_attacks(square: Square) -> Bitboard {
-        unsafe { *KING_MASKS.get_unchecked(usize::from(square)) }
-    }
-
     pub fn is_square_attacked(&self, square: Square, opposite_color: Color) -> bool {
         // Pawn
-        let pawn_attacks: Bitboard = Self::get_pawn_attacks(square, opposite_color);
+        let pawn_attacks: Bitboard = attacks::get_pawn_attacks(square, opposite_color);
         let enemy_pawns: Bitboard = self.bitboards[Piece::new(opposite_color, Kind::Pawn).to_index()];
         if !(pawn_attacks & enemy_pawns).is_empty() {
             return true;
         }
 
         // Knight
-        let knight_attacks: Bitboard = Self::get_knight_attacks(square);
+        let knight_attacks: Bitboard = attacks::get_knight_attacks(square);
         let enemy_knights: Bitboard = self.bitboards[Piece::new(opposite_color, Kind::Knight).to_index()];
         if !(knight_attacks & enemy_knights).is_empty() {
             return true;
         }
 
         // Bishop and Queen
-        let bishop_attacks: Bitboard = self.get_bishop_attacks(square);
+        let bishop_attacks: Bitboard = attacks::get_bishop_attacks(square, self.all_pieces_bitboard);
         let enemy_diagonal: Bitboard = self.bitboards[Piece::new(opposite_color, Kind::Bishop).to_index()]
             | self.bitboards[Piece::new(opposite_color, Kind::Queen).to_index()];
         if !(bishop_attacks & enemy_diagonal).is_empty() {
@@ -596,7 +605,7 @@ impl ChessBoard {
         }
 
         // Rook and Queen
-        let rook_attacks: Bitboard = self.get_rook_attacks(square);
+        let rook_attacks: Bitboard = attacks::get_rook_attacks(square, self.all_pieces_bitboard);
         let enemy_orthogonal: Bitboard = self.bitboards[Piece::new(opposite_color, Kind::Rook).to_index()]
             | self.bitboards[Piece::new(opposite_color, Kind::Queen).to_index()];
         if !(rook_attacks & enemy_orthogonal).is_empty() {
@@ -604,7 +613,7 @@ impl ChessBoard {
         }
 
         // King
-        let king_attacks: Bitboard = Self::get_king_attacks(square);
+        let king_attacks: Bitboard = attacks::get_king_attacks(square);
         let enemy_kings: Bitboard = self.bitboards[Piece::new(opposite_color, Kind::King).to_index()];
         if !(king_attacks & enemy_kings).is_empty() {
             return true;
