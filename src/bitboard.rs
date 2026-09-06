@@ -6,7 +6,7 @@ use crate::square::Square;
 pub mod prelude {
     pub use crate::bitboard::{
         ANTI_DIAGONAL_LINES, BLACK_PAWN_ATTACKERS_MASKS, Bitboard, DIAGONAL_LINES, FILE_A, FILE_H, FILE_LINES,
-        KING_MASKS, KNIGHT_MASKS, PAWN_ATTACKERS_MASKS, RANKS_ATTACKS, WHITE_PAWN_ATTACKERS_MASKS,
+        KING_MASKS, KNIGHT_MASKS, PAWN_ATTACKERS_MASKS, RANKS_ATTACKS, SQUARES_BETWEEN, WHITE_PAWN_ATTACKERS_MASKS,
     };
 }
 
@@ -133,11 +133,70 @@ const fn generate_ranks_attacks() -> [[u8; 8]; 256] {
     masks
 }
 
+const fn between_squares(from_square: Square, to_square: Square) -> Bitboard {
+    let f_row: i8 = from_square.row() as i8;
+    let f_col: i8 = from_square.col() as i8;
+    let t_row: i8 = to_square.row() as i8;
+    let t_col: i8 = to_square.col() as i8;
+
+    let diff_row: i8 = t_row - f_row;
+    let diff_col: i8 = t_col - f_col;
+
+    let step_row: i8 = diff_row.signum();
+    let step_col: i8 = diff_col.signum();
+    let is_on_same_line: bool = step_row == 0 || step_col == 0 || diff_row.abs() == diff_col.abs();
+
+    if !is_on_same_line {
+        return Bitboard::new(0);
+    }
+
+    let mut bitboard: u64 = 0u64;
+
+    let mut curr_row: i8 = f_row + step_row;
+    let mut curr_col: i8 = f_col + step_col;
+
+    while curr_row != t_row || curr_col != t_col {
+        let index: u8 = (curr_row * 8 + curr_col) as u8;
+
+        unsafe {
+            bitboard |= Square::new_unchecked(index).to_bitboard_mask();
+        }
+
+        curr_row += step_row;
+        curr_col += step_col;
+    }
+
+    Bitboard::new(bitboard)
+}
+
 pub const FILE_LINES: [Bitboard; 64] = generate_lines_masks((1, 0), (-1, 0));
 pub const DIAGONAL_LINES: [Bitboard; 64] = generate_lines_masks((1, 1), (-1, -1));
 pub const ANTI_DIAGONAL_LINES: [Bitboard; 64] = generate_lines_masks((-1, 1), (1, -1));
 
 pub const RANKS_ATTACKS: [[u8; 8]; 256] = generate_ranks_attacks();
+
+pub static SQUARES_BETWEEN: [[Bitboard; 64]; 64] = {
+    let mut table: [[Bitboard; 64]; 64] = [[Bitboard::new(0); 64]; 64];
+
+    let mut from: u8 = 0;
+
+    while from < 64 {
+        let mut to: u8 = 0;
+
+        while to < 64 {
+            let from_square: Square = unsafe { Square::new_unchecked(from) };
+            let to_square: Square = unsafe { Square::new_unchecked(to) };
+
+            table[from as usize][to as usize] = between_squares(from_square, to_square);
+
+            to += 1;
+        }
+
+        from += 1;
+    }
+
+    table
+};
 
 const WHITE_PAWN_ATTACKERS_OFFSETS: [(i8, i8); 2] = [(-1, -1), (-1, 1)];
 const BLACK_PAWN_ATTACKERS_OFFSETS: [(i8, i8); 2] = [(1, -1), (1, 1)];
