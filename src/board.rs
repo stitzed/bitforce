@@ -404,6 +404,51 @@ impl ChessBoard {
         *self.get_piece_at_mut(square) = None;
     }
 
+    fn get_pinned(&self, color: Color) -> (Bitboard, [Bitboard; 64]) {
+        let king_square: Square = self.bitboards[Piece::new(color, Kind::King).to_index()].first_square_unchecked();
+        let opposite_bitboard: Bitboard = self.side_bitboards[!color as usize];
+        let our_bitboard: Bitboard = self.side_bitboards[color as usize];
+
+        let mut pinned: Bitboard = Bitboard::default();
+        let mut legal_squares: [Bitboard; 64] = [Bitboard::new(u64::MAX); 64];
+
+        let bishop_attacks: Bitboard = attacks::get_bishop_attacks(king_square, opposite_bitboard);
+        let enemy_diagonal: Bitboard = self.bitboards[Piece::new(!color, Kind::Bishop).to_index()]
+            | self.bitboards[Piece::new(!color, Kind::Queen).to_index()];
+        let diagonal_pinners: Bitboard = bishop_attacks & enemy_diagonal;
+
+        for pinner in diagonal_pinners {
+            let squares_between: Bitboard = SQUARES_BETWEEN[usize::from(pinner)][usize::from(king_square)];
+            let pinned_squares: Bitboard = squares_between & our_bitboard;
+
+            if pinned_squares.count_squares() == 1 {
+                pinned |= pinned_squares;
+                let pinned_sq: Square = pinned_squares.first_square_unchecked();
+
+                legal_squares[usize::from(pinned_sq)] = squares_between | Bitboard::new(pinner.to_bitboard_mask());
+            }
+        }
+
+        let rook_attacks: Bitboard = attacks::get_rook_attacks(king_square, opposite_bitboard);
+        let enemy_orthogonal: Bitboard = self.bitboards[Piece::new(!color, Kind::Rook).to_index()]
+            | self.bitboards[Piece::new(!color, Kind::Queen).to_index()];
+        let orthogonal_pinners: Bitboard = rook_attacks & enemy_orthogonal;
+
+        for pinner in orthogonal_pinners {
+            let squares_between: Bitboard = SQUARES_BETWEEN[usize::from(pinner)][usize::from(king_square)];
+            let pinned_squares: Bitboard = squares_between & our_bitboard;
+
+            if pinned_squares.count_squares() == 1 {
+                pinned |= pinned_squares;
+                let pinned_sq: Square = pinned_squares.first_square_unchecked();
+
+                legal_squares[usize::from(pinned_sq)] = squares_between | Bitboard::new(pinner.to_bitboard_mask());
+            }
+        }
+
+        (pinned, legal_squares)
+    }
+
     pub fn generate_pseudo_legal_moves<'a>(&self, color: Color, move_buffer: MoveBuffer<'a>) -> &'a [Move] {
         let bishop_attacks = |sq| attacks::get_bishop_attacks(sq, self.all_pieces_bitboard);
         let rook_attacks = |sq| attacks::get_rook_attacks(sq, self.all_pieces_bitboard);
