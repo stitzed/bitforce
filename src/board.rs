@@ -488,6 +488,38 @@ impl ChessBoard {
         danger_squares
     }
 
+    fn get_checkers(&self, color: Color) -> Bitboard {
+        let opposite_color: Color = !color;
+
+        let king_square: Square = self.bitboard(Piece::new(color, Kind::King)).first_square_unchecked();
+
+        let mut checkers: Bitboard = Bitboard::default();
+
+        let pawn_attacks: Bitboard = attacks::get_pawn_attacks(king_square, opposite_color);
+        let enemy_pawns: Bitboard = self.bitboards[Piece::new(opposite_color, Kind::Pawn).to_index()];
+        checkers |= pawn_attacks & enemy_pawns;
+
+        let knight_attacks: Bitboard = attacks::get_knight_attacks(king_square);
+        let enemy_knights: Bitboard = self.bitboards[Piece::new(opposite_color, Kind::Knight).to_index()];
+        checkers |= knight_attacks & enemy_knights;
+
+        let bishop_attacks: Bitboard = attacks::get_bishop_attacks(king_square, self.all_pieces_bitboard);
+        let enemy_diagonal: Bitboard = self.bitboards[Piece::new(opposite_color, Kind::Bishop).to_index()]
+            | self.bitboards[Piece::new(opposite_color, Kind::Queen).to_index()];
+        checkers |= bishop_attacks & enemy_diagonal;
+
+        let rook_attacks: Bitboard = attacks::get_rook_attacks(king_square, self.all_pieces_bitboard);
+        let enemy_orthogonal: Bitboard = self.bitboards[Piece::new(opposite_color, Kind::Rook).to_index()]
+            | self.bitboards[Piece::new(opposite_color, Kind::Queen).to_index()];
+        checkers |= rook_attacks & enemy_orthogonal;
+
+        let king_attacks: Bitboard = attacks::get_king_attacks(king_square);
+        let enemy_kings: Bitboard = self.bitboards[Piece::new(opposite_color, Kind::King).to_index()];
+        checkers |= king_attacks & enemy_kings;
+
+        checkers
+    }
+
     pub fn generate_pseudo_legal_moves<'a>(&self, color: Color, move_buffer: MoveBuffer<'a>) -> &'a [Move] {
         let bishop_attacks = |sq| attacks::get_bishop_attacks(sq, self.all_pieces_bitboard);
         let rook_attacks = |sq| attacks::get_rook_attacks(sq, self.all_pieces_bitboard);
