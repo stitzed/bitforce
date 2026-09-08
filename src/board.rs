@@ -449,6 +449,45 @@ impl ChessBoard {
         (pinned, legal_squares)
     }
 
+    fn get_danger_squares(&self, color: Color) -> Bitboard {
+        let opposite_color: Color = !color;
+
+        let our_king_bitboard: Bitboard = self.bitboard(Piece::new(color, Kind::King));
+        let occupancy: Bitboard = self.all_pieces_bitboard & !our_king_bitboard;
+
+        let mut danger_squares: Bitboard = Bitboard::default();
+
+        for sq in self.bitboard(Piece::new(opposite_color, Kind::Pawn)) {
+            danger_squares |= attacks::get_pawn_attacks(sq, color);
+        }
+
+        for sq in self.bitboard(Piece::new(opposite_color, Kind::Knight)) {
+            danger_squares |= attacks::get_knight_attacks(sq);
+        }
+
+        let queen_bitboard: Bitboard = self.bitboard(Piece::new(opposite_color, Kind::Queen));
+
+        let diagonal_sliders: Bitboard = self.bitboard(Piece::new(opposite_color, Kind::Bishop)) | queen_bitboard;
+
+        for sq in diagonal_sliders {
+            danger_squares |= attacks::get_bishop_attacks(sq, occupancy);
+        }
+
+        let straight_sliders: Bitboard = self.bitboard(Piece::new(opposite_color, Kind::Rook)) | queen_bitboard;
+
+        for sq in straight_sliders {
+            danger_squares |= attacks::get_rook_attacks(sq, occupancy);
+        }
+
+        let enemy_king_square: Square = self
+            .bitboard(Piece::new(opposite_color, Kind::King))
+            .first_square_unchecked();
+
+        danger_squares |= attacks::get_king_attacks(enemy_king_square);
+
+        danger_squares
+    }
+
     pub fn generate_pseudo_legal_moves<'a>(&self, color: Color, move_buffer: MoveBuffer<'a>) -> &'a [Move] {
         let bishop_attacks = |sq| attacks::get_bishop_attacks(sq, self.all_pieces_bitboard);
         let rook_attacks = |sq| attacks::get_rook_attacks(sq, self.all_pieces_bitboard);
