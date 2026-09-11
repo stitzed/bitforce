@@ -521,92 +521,192 @@ impl ChessBoard {
         checkers
     }
 
-    pub fn generate_pseudo_legal_moves<'a>(&self, color: Color, move_buffer: MoveBuffer<'a>) -> &'a [Move] {
+    pub fn generate_legal_moves<'a>(&self, color: Color, move_buffer: MoveBuffer<'a>) -> &'a [Move] {
+        let knight_attacks = attacks::get_knight_attacks;
         let bishop_attacks = |sq| attacks::get_bishop_attacks(sq, self.all_pieces_bitboard);
         let rook_attacks = |sq| attacks::get_rook_attacks(sq, self.all_pieces_bitboard);
         let queen_attacks = |sq| attacks::get_queen_attacks(sq, self.all_pieces_bitboard);
 
+        let checkers: Bitboard = self.get_checkers(self.current_turn);
+        let danger_squares: Bitboard = self.get_danger_squares(self.current_turn);
+
+        let king_square: Square = self.bitboard(Piece::new(color, Kind::King)).first_square_unchecked();
+
+        let checker_ray: Bitboard = match checkers.count_squares() {
+            0 => Bitboard::new(u64::MAX),
+            1 => {
+                let checker = checkers.first_square_unchecked();
+
+                SQUARES_BETWEEN[usize::from(checker)][usize::from(king_square)]
+                    | Bitboard::new(checker.to_bitboard_mask())
+            }
+            _ => {
+                self.generate_king_moves(color, danger_squares, move_buffer);
+                return move_buffer.as_slice();
+            }
+        };
+
+        let pinned_rays: [Bitboard; 64] = self.get_pinned_rays(self.current_turn);
+
         for kind in Kind::ALL_KINDS {
             match kind {
-                Kind::Pawn => self.generate_pawn_moves(color, move_buffer),
-                Kind::Knight => self.generate_moves_for_kind(color, kind, attacks::get_knight_attacks, move_buffer),
-                Kind::Bishop => self.generate_moves_for_kind(color, kind, bishop_attacks, move_buffer),
-                Kind::Rook => self.generate_moves_for_kind(color, kind, rook_attacks, move_buffer),
-                Kind::Queen => self.generate_moves_for_kind(color, kind, queen_attacks, move_buffer),
-                Kind::King => self.generate_king_moves(color, move_buffer),
+                Kind::Pawn => self.generate_pawn_moves(color, &pinned_rays, checker_ray, move_buffer),
+                Kind::Knight => {
+                    self.generate_moves_for_kind(color, kind, knight_attacks, &pinned_rays, checker_ray, move_buffer)
+                }
+                Kind::Bishop => {
+                    self.generate_moves_for_kind(color, kind, bishop_attacks, &pinned_rays, checker_ray, move_buffer)
+                }
+                Kind::Rook => {
+                    self.generate_moves_for_kind(color, kind, rook_attacks, &pinned_rays, checker_ray, move_buffer)
+                }
+                Kind::Queen => {
+                    self.generate_moves_for_kind(color, kind, queen_attacks, &pinned_rays, checker_ray, move_buffer)
+                }
+                Kind::King => self.generate_king_moves(color, danger_squares, move_buffer),
             }
         }
 
         move_buffer.as_slice()
     }
 
-    fn generate_pawn_moves(&self, color: Color, move_buffer: MoveBuffer<'_>) {
+    fn generate_pawn_moves(
+        &self,
+        color: Color,
+        pinned_rays: &[Bitboard; 64],
+        checker_ray: Bitboard,
+        move_buffer: MoveBuffer<'_>,
+    ) {
         match color {
-            Color::White => self.generate_pawn_moves_for_color::<WhitePawnDirections>(move_buffer),
-            Color::Black => self.generate_pawn_moves_for_color::<BlackPawnDirections>(move_buffer),
+            Color::White => {
+                self.generate_pawn_moves_for_color::<WhitePawnDirections>(pinned_rays, checker_ray, move_buffer)
+            }
+            Color::Black => {
+                self.generate_pawn_moves_for_color::<BlackPawnDirections>(pinned_rays, checker_ray, move_buffer)
+            }
         }
     }
 
-    fn generate_pawn_moves_for_color<D: PawnDirections>(&self, move_buffer: MoveBuffer<'_>) {
+    fn generate_pawn_moves_for_color<D: PawnDirections>(
+        &self,
+        pinned_rays: &[Bitboard; 64],
+        checker_ray: Bitboard,
+        move_buffer: MoveBuffer<'_>,
+    ) {
         let pawn_bitboard: Bitboard = self.bitboards[Piece::new(D::COLOR, Kind::Pawn).to_index()];
         let opposite_bitboard: Bitboard = self.side_bitboards[!D::COLOR as usize];
 
         let once_push: Bitboard = D::shift_bitboard(pawn_bitboard, 8) & !self.all_pieces_bitboard;
         let double_push: Bitboard = D::shift_bitboard(once_push & D::ONCE_PUSH_RANK, 8) & !self.all_pieces_bitboard;
 
+        let legal_once_push: Bitboard = once_push & checker_ray;
+        let legal_double_push: Bitboard = double_push & checker_ray;
+
         let left_attacks_mask: Bitboard = D::shift_bitboard(pawn_bitboard & !FILE_A, D::LEFT_ATTACKS_OFFSET);
         let right_attacks_mask: Bitboard = D::shift_bitboard(pawn_bitboard & !FILE_H, D::RIGHT_ATTACKS_OFFSET);
 
-        let left_attacks: Bitboard = left_attacks_mask & opposite_bitboard;
-        let right_attacks: Bitboard = right_attacks_mask & opposite_bitboard;
+        let left_attacks: Bitboard = left_attacks_mask & opposite_bitboard & checker_ray;
+        let right_attacks: Bitboard = right_attacks_mask & opposite_bitboard & checker_ray;
+
+        let is_legal = |from_sq, to_sq| pinned_rays[usize::from(from_sq)].is_square_set(to_sq);
 
         // En passant moves
         if let Some(ep_sq) = self.en_passant_square {
+            let king_square: Square = self.bitboard(Piece::new(D::COLOR, Kind::King)).first_square_unchecked();
+            let opposite_pawn: Square = D::offest_square(ep_sq, 8);
+
+            let mut ep_rank: Bitboard = self.all_pieces_bitboard & Bitboard::new(0xFF << (opposite_pawn.row() * 8));
+            ep_rank.clear_square(opposite_pawn);
+
             let pawn_attackers_mask: Bitboard =
                 unsafe { *PAWN_ATTACKERS_MASKS[D::COLOR as usize].get_unchecked(usize::from(ep_sq)) };
 
             let attackers: Bitboard = pawn_bitboard & pawn_attackers_mask;
 
-            for sq in attackers {
-                move_buffer.push(MoveBuilder::new(sq, ep_sq).with_capture().with_en_passant().build());
+            for attacker in attackers {
+                let ep_move: Move = MoveBuilder::new(attacker, ep_sq)
+                    .with_capture()
+                    .with_en_passant()
+                    .build();
+
+                if !is_legal(attacker, ep_sq) {
+                    continue;
+                }
+
+                if king_square.row() != opposite_pawn.row() {
+                    move_buffer.push(ep_move);
+                    continue;
+                }
+
+                let mut simulated_rank: Bitboard = ep_rank;
+                simulated_rank.clear_square(attacker);
+
+                let enemy_orthogonal: Bitboard = self.bitboard(Piece::new(!D::COLOR, Kind::Rook))
+                    | self.bitboard(Piece::new(!D::COLOR, Kind::Queen));
+
+                if (attacks::get_rank_attacks(king_square, simulated_rank) & enemy_orthogonal).is_empty() {
+                    move_buffer.push(ep_move);
+                }
             }
         }
 
         // Quiet one push moves
-        for sq in once_push & !D::PROMOTION_RANK {
-            move_buffer.push(MoveBuilder::new(D::offest_square(sq, 8), sq).build());
+        for sq in legal_once_push & !D::PROMOTION_RANK {
+            let from_square: Square = D::offest_square(sq, 8);
+
+            if !is_legal(from_square, sq) {
+                continue;
+            };
+
+            move_buffer.push(MoveBuilder::new(from_square, sq).build());
         }
 
         // Quiet one push moves with promotion
-        for sq in once_push & D::PROMOTION_RANK {
+        for sq in legal_once_push & D::PROMOTION_RANK {
+            let from_square: Square = D::offest_square(sq, 8);
+
+            if !is_legal(from_square, sq) {
+                continue;
+            };
+
             for promotion_type in Kind::PROMOTION_KINDS {
-                move_buffer.push(
-                    MoveBuilder::new(D::offest_square(sq, 8), sq)
-                        .with_promotion(promotion_type)
-                        .build(),
-                );
+                move_buffer.push(MoveBuilder::new(from_square, sq).with_promotion(promotion_type).build());
             }
         }
 
         // Quiet double push moves
-        for sq in double_push {
-            move_buffer.push(MoveBuilder::new(D::offest_square(sq, 16), sq).build());
+        for sq in legal_double_push {
+            let from_square: Square = D::offest_square(sq, 16);
+
+            if !is_legal(from_square, sq) {
+                continue;
+            };
+
+            move_buffer.push(MoveBuilder::new(from_square, sq).build());
         }
 
         // Left capture moves
         for sq in left_attacks & !D::PROMOTION_RANK {
-            move_buffer.push(
-                MoveBuilder::new(D::offest_square(sq, D::LEFT_ATTACKS_OFFSET), sq)
-                    .with_capture()
-                    .build(),
-            );
+            let from_square: Square = D::offest_square(sq, D::LEFT_ATTACKS_OFFSET);
+
+            if !is_legal(from_square, sq) {
+                continue;
+            };
+
+            move_buffer.push(MoveBuilder::new(from_square, sq).with_capture().build());
         }
 
         // Left capture moves with promotion
         for sq in left_attacks & D::PROMOTION_RANK {
+            let from_square: Square = D::offest_square(sq, D::LEFT_ATTACKS_OFFSET);
+
+            if !is_legal(from_square, sq) {
+                continue;
+            };
+
             for promotion_type in Kind::PROMOTION_KINDS {
                 move_buffer.push(
-                    MoveBuilder::new(D::offest_square(sq, D::LEFT_ATTACKS_OFFSET), sq)
+                    MoveBuilder::new(from_square, sq)
                         .with_capture()
                         .with_promotion(promotion_type)
                         .build(),
@@ -616,18 +716,26 @@ impl ChessBoard {
 
         // Right capture moves
         for sq in right_attacks & !D::PROMOTION_RANK {
-            move_buffer.push(
-                MoveBuilder::new(D::offest_square(sq, D::RIGHT_ATTACKS_OFFSET), sq)
-                    .with_capture()
-                    .build(),
-            );
+            let from_square: Square = D::offest_square(sq, D::RIGHT_ATTACKS_OFFSET);
+
+            if !is_legal(from_square, sq) {
+                continue;
+            };
+
+            move_buffer.push(MoveBuilder::new(from_square, sq).with_capture().build());
         }
 
         // Right capture moves with promotion
         for sq in right_attacks & D::PROMOTION_RANK {
+            let from_square: Square = D::offest_square(sq, D::RIGHT_ATTACKS_OFFSET);
+
+            if !is_legal(from_square, sq) {
+                continue;
+            };
+
             for promotion_type in Kind::PROMOTION_KINDS {
                 move_buffer.push(
-                    MoveBuilder::new(D::offest_square(sq, D::RIGHT_ATTACKS_OFFSET), sq)
+                    MoveBuilder::new(from_square, sq)
                         .with_capture()
                         .with_promotion(promotion_type)
                         .build(),
@@ -636,14 +744,22 @@ impl ChessBoard {
         }
     }
 
-    fn generate_moves_for_kind<F>(&self, color: Color, kind: Kind, get_attacks: F, move_buffer: MoveBuffer<'_>)
-    where
+    fn generate_moves_for_kind<F>(
+        &self,
+        color: Color,
+        kind: Kind,
+        get_attacks: F,
+        pinned_rays: &[Bitboard; 64],
+        checker_ray: Bitboard,
+        move_buffer: MoveBuffer<'_>,
+    ) where
         F: Fn(Square) -> Bitboard,
     {
         let piece_bitboard: Bitboard = self.bitboards[Piece::new(color, kind).to_index()];
 
         for sq in piece_bitboard {
-            let attacks: Bitboard = get_attacks(sq);
+            let pinned_ray: Bitboard = pinned_rays[usize::from(sq)];
+            let attacks: Bitboard = get_attacks(sq) & pinned_ray & checker_ray;
 
             let quiet_squares: Bitboard = attacks & !self.all_pieces_bitboard;
 
@@ -659,20 +775,32 @@ impl ChessBoard {
         }
     }
 
-    fn generate_king_moves(&self, color: Color, move_buffer: MoveBuffer<'_>) {
-        self.generate_moves_for_kind(color, Kind::King, attacks::get_king_attacks, move_buffer);
+    fn generate_king_moves(&self, color: Color, danger_squares: Bitboard, move_buffer: MoveBuffer<'_>) {
+        let king_bitboard: Bitboard = self.bitboard(Piece::new(color, Kind::King));
+        let king_square: Square = king_bitboard.first_square_unchecked();
+
+        let attacks: Bitboard = attacks::get_king_attacks(king_square);
+
+        let quiet_squares: Bitboard = attacks & !self.all_pieces_bitboard & !danger_squares;
+
+        for quiet_sq in quiet_squares {
+            move_buffer.push(MoveBuilder::new(king_square, quiet_sq).build());
+        }
+
+        let capture_squares: Bitboard = attacks & self.side_bitboards[(!color) as usize] & !danger_squares;
+
+        for cap_sq in capture_squares {
+            move_buffer.push(MoveBuilder::new(king_square, cap_sq).with_capture().build());
+        }
 
         let color_shift: u8 = color.shift();
         let castle_square: Square = Square::E1 + color_shift;
-
-        let king_bitboard: Bitboard = self.bitboards[Piece::new(color, Kind::King).to_index()];
-        let king_square: Square = king_bitboard.first_square_unchecked();
 
         if king_square != castle_square {
             return;
         }
 
-        if self.is_square_attacked(king_square, !color) {
+        if danger_squares.is_square_set(king_square) {
             return;
         }
 
@@ -687,12 +815,16 @@ impl ChessBoard {
             }
 
             let passed_square: Square = castle.passed_square() + color_shift;
-            if self.is_square_attacked(passed_square, !color) {
+            if danger_squares.is_square_set(passed_square) {
                 continue;
             }
 
             let mask: Bitboard = castle.xor_mask().king_mask << color_shift;
             let to_square: Square = (king_bitboard ^ mask).first_square_unchecked();
+
+            if danger_squares.is_square_set(to_square) {
+                continue;
+            }
 
             move_buffer.push(MoveBuilder::new(king_square, to_square).with_castling(castle).build());
         }
@@ -915,16 +1047,14 @@ impl ChessBoard {
 
         let mut nodes: u64 = 0;
         let mut buf: Buffer<Move, MOVE_BUFFER_LEN> = Buffer::new();
-        let moves: &[Move] = self.generate_pseudo_legal_moves(self.current_turn, &mut buf);
+        let moves: &[Move] = self.generate_legal_moves(self.current_turn, &mut buf);
+
+        if depth == 1 {
+            return moves.len() as u64;
+        }
 
         for &mv in moves {
             self.make_move_unchecked(mv);
-
-            if self.is_in_check(!self.current_turn) {
-                self.unmake_move();
-                continue;
-            }
-
             nodes += self.perft(depth - 1);
             self.unmake_move();
         }
