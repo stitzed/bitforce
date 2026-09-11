@@ -55,7 +55,7 @@ mod attacks {
             | hyperbola_quintessence_attacks(square, &ANTI_DIAGONAL_LINES, occupancy)
     }
 
-    pub fn get_rook_attacks(square: Square, occupancy: Bitboard) -> Bitboard {
+    pub fn get_rank_attacks(square: Square, occupancy: Bitboard) -> Bitboard {
         let row: u8 = square.row();
         let col: usize = square.col() as usize;
         let shift_bits: u8 = row * 8;
@@ -68,7 +68,11 @@ mod attacks {
 
         let rank_attacks: Bitboard = Bitboard::new(shifted_attack);
 
-        hyperbola_quintessence_attacks(square, &FILE_LINES, occupancy) | rank_attacks
+        rank_attacks
+    }
+
+    pub fn get_rook_attacks(square: Square, occupancy: Bitboard) -> Bitboard {
+        hyperbola_quintessence_attacks(square, &FILE_LINES, occupancy) | get_rank_attacks(square, occupancy)
     }
 
     pub fn get_queen_attacks(square: Square, occupancy: Bitboard) -> Bitboard {
