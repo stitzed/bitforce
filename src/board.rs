@@ -408,12 +408,11 @@ impl ChessBoard {
         *self.get_piece_at_mut(square) = None;
     }
 
-    fn get_pinned(&self, color: Color) -> (Bitboard, [Bitboard; 64]) {
+    fn get_pinned_rays(&self, color: Color) -> [Bitboard; 64] {
         let king_square: Square = self.bitboards[Piece::new(color, Kind::King).to_index()].first_square_unchecked();
         let opposite_bitboard: Bitboard = self.side_bitboards[!color as usize];
         let our_bitboard: Bitboard = self.side_bitboards[color as usize];
 
-        let mut pinned: Bitboard = Bitboard::default();
         let mut legal_squares: [Bitboard; 64] = [Bitboard::new(u64::MAX); 64];
 
         let bishop_attacks: Bitboard = attacks::get_bishop_attacks(king_square, opposite_bitboard);
@@ -426,7 +425,6 @@ impl ChessBoard {
             let pinned_squares: Bitboard = squares_between & our_bitboard;
 
             if pinned_squares.count_squares() == 1 {
-                pinned |= pinned_squares;
                 let pinned_sq: Square = pinned_squares.first_square_unchecked();
 
                 legal_squares[usize::from(pinned_sq)] = squares_between | Bitboard::new(pinner.to_bitboard_mask());
@@ -443,14 +441,13 @@ impl ChessBoard {
             let pinned_squares: Bitboard = squares_between & our_bitboard;
 
             if pinned_squares.count_squares() == 1 {
-                pinned |= pinned_squares;
                 let pinned_sq: Square = pinned_squares.first_square_unchecked();
 
                 legal_squares[usize::from(pinned_sq)] = squares_between | Bitboard::new(pinner.to_bitboard_mask());
             }
         }
 
-        (pinned, legal_squares)
+        legal_squares
     }
 
     fn get_danger_squares(&self, color: Color) -> Bitboard {
