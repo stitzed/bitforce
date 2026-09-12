@@ -231,7 +231,7 @@ impl Bitboard {
     }
 
     #[inline(always)]
-    pub fn is_square_set(&self, square: Square) -> bool {
+    pub fn contains(&self, square: Square) -> bool {
         self.0 & (square.to_bitboard_mask()) != 0
     }
 
@@ -343,7 +343,7 @@ impl Display for Bitboard {
                 let index: u8 = row * 8 + col;
                 let square: Square = unsafe { Square::new_unchecked(index) };
 
-                if self.is_square_set(square) {
+                if self.contains(square) {
                     write!(f, "X ")?;
                 } else {
                     write!(f, ". ")?;

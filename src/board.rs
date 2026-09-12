@@ -608,7 +608,7 @@ impl ChessBoard {
         let left_attacks: Bitboard = left_attacks_mask & opposite_bitboard & checker_ray;
         let right_attacks: Bitboard = right_attacks_mask & opposite_bitboard & checker_ray;
 
-        let is_legal = |from_sq, to_sq| pinned_rays[usize::from(from_sq)].is_square_set(to_sq);
+        let is_legal = |from_sq, to_sq| pinned_rays[usize::from(from_sq)].contains(to_sq);
 
         // En passant moves
         if let Some(ep_sq) = self.en_passant_square {
@@ -800,7 +800,7 @@ impl ChessBoard {
             return;
         }
 
-        if danger_squares.is_square_set(king_square) {
+        if danger_squares.contains(king_square) {
             return;
         }
 
@@ -815,14 +815,14 @@ impl ChessBoard {
             }
 
             let passed_square: Square = castle.passed_square() + color_shift;
-            if danger_squares.is_square_set(passed_square) {
+            if danger_squares.contains(passed_square) {
                 continue;
             }
 
             let mask: Bitboard = castle.xor_mask().king_mask << color_shift;
             let to_square: Square = (king_bitboard ^ mask).first_square_unchecked();
 
-            if danger_squares.is_square_set(to_square) {
+            if danger_squares.contains(to_square) {
                 continue;
             }
 
@@ -959,7 +959,7 @@ impl ChessBoard {
 
                 let is_rook_on_start_square: bool = self
                     .bitboard(Piece::new(color, Kind::Rook))
-                    .is_square_set(castle.rook_start_square() + color_shift);
+                    .contains(castle.rook_start_square() + color_shift);
 
                 self.castling_flags
                     .update_castling(color, castle, old_flag & is_rook_on_start_square);
@@ -1070,7 +1070,7 @@ impl ChessBoard {
             match piece {
                 Some(p) => {
                     let bb: Bitboard = self.bitboard(p);
-                    if !bb.is_square_set(sq) {
+                    if !bb.contains(sq) {
                         return false;
                     }
 
@@ -1079,38 +1079,38 @@ impl ChessBoard {
                             continue;
                         }
 
-                        if bb.is_square_set(sq) {
+                        if bb.contains(sq) {
                             return false;
                         }
                     }
 
                     let s_bb: Bitboard = self.side_bitboards[p.color() as usize];
-                    if !s_bb.is_square_set(sq) {
+                    if !s_bb.contains(sq) {
                         return false;
                     }
 
-                    if self.side_bitboards[!p.color() as usize].is_square_set(sq) {
+                    if self.side_bitboards[!p.color() as usize].contains(sq) {
                         return false;
                     }
 
-                    if !self.all_pieces_bitboard.is_square_set(sq) {
+                    if !self.all_pieces_bitboard.contains(sq) {
                         return false;
                     }
                 }
                 None => {
                     for bb in self.bitboards {
-                        if bb.is_square_set(sq) {
+                        if bb.contains(sq) {
                             return false;
                         }
                     }
 
                     for bb in self.side_bitboards {
-                        if bb.is_square_set(sq) {
+                        if bb.contains(sq) {
                             return false;
                         }
                     }
 
-                    if self.all_pieces_bitboard.is_square_set(sq) {
+                    if self.all_pieces_bitboard.contains(sq) {
                         return false;
                     }
                 }
