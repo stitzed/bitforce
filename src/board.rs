@@ -943,28 +943,7 @@ impl ChessBoard {
 
         self.undo_info_stack.push(undo_info);
 
-        let is_king_moved: bool = target_piece.kind() == Kind::King;
-
-        for castle in CastlingType::ALL_CASTLING_TYPES {
-            let old_flag: bool = self.castling_flags.can_castle(target_piece_color, castle);
-
-            self.castling_flags
-                .update_castling(target_piece_color, castle, old_flag & !is_king_moved);
-        }
-
-        for color in Color::ALL_COLORS {
-            for castle in CastlingType::ALL_CASTLING_TYPES {
-                let color_shift: u8 = color.shift();
-                let old_flag: bool = self.castling_flags.can_castle(color, castle);
-
-                let is_rook_on_start_square: bool = self
-                    .bitboard(Piece::new(color, Kind::Rook))
-                    .contains(castle.rook_start_square() + color_shift);
-
-                self.castling_flags
-                    .update_castling(color, castle, old_flag & is_rook_on_start_square);
-            }
-        }
+        self.castling_flags.clear_rights_for_move(from_square, to_square);
 
         let is_double_push: bool =
             target_piece.kind() == Kind::Pawn && u8::from(to_square) ^ u8::from(from_square) == 16;

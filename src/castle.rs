@@ -72,6 +72,25 @@ impl CastlingType {
 pub struct CastlingFlags(u8);
 
 impl CastlingFlags {
+    const RIGHTS_MASK: [u8; 64] = {
+        let mut table: [u8; 64] = [0b1111; 64];
+
+        let white_kingside: u8 = Self::castle_to_mask(Color::White, CastlingType::Kingside);
+        let white_queenside: u8 = Self::castle_to_mask(Color::White, CastlingType::Queenside);
+        let black_kingside: u8 = Self::castle_to_mask(Color::Black, CastlingType::Kingside);
+        let black_queenside: u8 = Self::castle_to_mask(Color::Black, CastlingType::Queenside);
+
+        table[4] = !(white_kingside | white_queenside); // E1
+        table[60] = !(black_kingside | black_queenside); // E8
+
+        table[7] = !white_kingside; // H1
+        table[0] = !white_queenside; // A1
+        table[63] = !black_kingside; // H8
+        table[56] = !black_queenside; // A8
+
+        table
+    };
+
     #[inline(always)]
     pub fn new(white_kingside: bool, white_queenside: bool, black_kingside: bool, black_queenside: bool) -> Self {
         let mut bits: u8 = (black_queenside as u8) << 3;
@@ -83,24 +102,12 @@ impl CastlingFlags {
     }
 
     #[inline(always)]
-    fn castle_to_mask(color: Color, castling_type: CastlingType) -> u8 {
+    const fn castle_to_mask(color: Color, castling_type: CastlingType) -> u8 {
         (castling_type as u8) << (color as u8 * 2)
     }
 
-    #[inline(always)]
-    pub fn set_flag(&mut self, color: Color, castling_type: CastlingType) {
-        self.0 |= Self::castle_to_mask(color, castling_type);
-    }
-
-    #[inline(always)]
-    pub fn update_castling(&mut self, color: Color, castling_type: CastlingType, can_castle: bool) {
-        let mask: u8 = Self::castle_to_mask(color, castling_type);
-        self.0 = (self.0 & !mask) | (mask * can_castle as u8);
-    }
-
-    #[inline(always)]
-    pub fn unset_flag(&mut self, color: Color, castling_type: CastlingType) {
-        self.0 &= !(Self::castle_to_mask(color, castling_type));
+    pub fn clear_rights_for_move(&mut self, from_square: Square, to_square: Square) {
+        self.0 &= Self::RIGHTS_MASK[usize::from(from_square)] & Self::RIGHTS_MASK[usize::from(to_square)]
     }
 
     #[inline(always)]
@@ -164,7 +171,7 @@ impl FromStr for CastlingFlags {
                 return Err(CastlingParseError::InvalidFormat);
             }
 
-            castling_flags.set_flag(color, castling_type);
+            castling_flags.0 |= Self::castle_to_mask(color, castling_type);
 
             current_rank = castling_rank;
         }
