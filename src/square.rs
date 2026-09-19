@@ -34,7 +34,7 @@ impl Square {
     }
 
     #[inline(always)]
-    pub const fn to_bitboard_mask(&self) -> u64 {
+    pub const fn bitboard_mask(&self) -> u64 {
         1 << self.0
     }
 

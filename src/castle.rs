@@ -61,7 +61,7 @@ impl CastlingType {
 
     #[inline(always)]
     pub fn rook_start_square(&self) -> Square {
-        (Bitboard::new(self.passed_square().to_bitboard_mask()) ^ self.xor_mask().rook_mask).first_square_unchecked()
+        (Bitboard::from(self.passed_square()) ^ self.xor_mask().rook_mask).first_square_unchecked()
     }
 }
 

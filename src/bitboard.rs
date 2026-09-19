@@ -28,7 +28,7 @@ const fn generate_masks(offsets: &[(i8, i8)]) -> [Bitboard; 64] {
             let (delta_row, delta_col) = (row as i8 + piece_offset.0, col as i8 + piece_offset.1);
 
             if (delta_row >= 0 && delta_row < 8) && (delta_col >= 0 && delta_col < 8) {
-                mask |= Square::from_coords(delta_row as u8, delta_col as u8).to_bitboard_mask()
+                mask |= Square::from_coords(delta_row as u8, delta_col as u8).bitboard_mask()
             }
 
             arr_ptr += 1;
@@ -51,13 +51,13 @@ const fn generate_lines_masks(positive_offset: (i8, i8), negative_offset: (i8, i
         let sq: Square = unsafe { Square::new_unchecked(i as u8) };
         let (row, col) = (sq.row(), sq.col());
 
-        let mut mask: u64 = sq.to_bitboard_mask();
+        let mut mask: u64 = sq.bitboard_mask();
 
         let mut pos_delta_row: i8 = row as i8 + positive_offset.0;
         let mut pos_delta_col: i8 = col as i8 + positive_offset.1;
 
         while (pos_delta_row >= 0 && pos_delta_row < 8) && (pos_delta_col >= 0 && pos_delta_col < 8) {
-            mask |= Square::from_coords(pos_delta_row as u8, pos_delta_col as u8).to_bitboard_mask();
+            mask |= Square::from_coords(pos_delta_row as u8, pos_delta_col as u8).bitboard_mask();
 
             pos_delta_row += positive_offset.0;
             pos_delta_col += positive_offset.1;
@@ -67,7 +67,7 @@ const fn generate_lines_masks(positive_offset: (i8, i8), negative_offset: (i8, i
         let mut neg_delta_col: i8 = col as i8 + negative_offset.1;
 
         while (neg_delta_row >= 0 && neg_delta_row < 8) && (neg_delta_col >= 0 && neg_delta_col < 8) {
-            mask |= Square::from_coords(neg_delta_row as u8, neg_delta_col as u8).to_bitboard_mask();
+            mask |= Square::from_coords(neg_delta_row as u8, neg_delta_col as u8).bitboard_mask();
 
             neg_delta_row += negative_offset.0;
             neg_delta_col += negative_offset.1;
@@ -159,7 +159,7 @@ const fn between_squares(from_square: Square, to_square: Square) -> Bitboard {
         let index: u8 = (curr_row * 8 + curr_col) as u8;
 
         unsafe {
-            bitboard |= Square::new_unchecked(index).to_bitboard_mask();
+            bitboard |= Square::new_unchecked(index).bitboard_mask();
         }
 
         curr_row += step_row;
@@ -222,17 +222,17 @@ impl Bitboard {
 
     #[inline(always)]
     pub fn set_square(&mut self, square: Square) {
-        self.0 |= square.to_bitboard_mask()
+        self.0 |= square.bitboard_mask()
     }
 
     #[inline(always)]
     pub fn clear_square(&mut self, square: Square) {
-        self.0 &= !(square.to_bitboard_mask())
+        self.0 &= !(square.bitboard_mask())
     }
 
     #[inline(always)]
     pub fn contains(&self, square: Square) -> bool {
-        self.0 & (square.to_bitboard_mask()) != 0
+        self.0 & (square.bitboard_mask()) != 0
     }
 
     #[inline(always)]
@@ -333,6 +333,12 @@ impl Sub for Bitboard {
 impl From<Bitboard> for usize {
     fn from(value: Bitboard) -> Self {
         value.0 as usize
+    }
+}
+
+impl From<Square> for Bitboard {
+    fn from(value: Square) -> Self {
+        Self(value.bitboard_mask())
     }
 }
 

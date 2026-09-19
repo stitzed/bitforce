@@ -34,7 +34,7 @@ mod attacks {
     ) -> Bitboard {
         let mask: Bitboard = unsafe { *line_masks.get_unchecked(usize::from(square)) };
         let line: Bitboard = occupancy & mask;
-        let slider: Bitboard = Bitboard::new(square.to_bitboard_mask());
+        let slider: Bitboard = Bitboard::from(square);
 
         let forward: Bitboard = (line - (slider << 1)) ^ line;
         let reverse: Bitboard = ((line.swap_ranks() - (slider.swap_ranks() << 1)) ^ line.swap_ranks()).swap_ranks();
@@ -265,8 +265,8 @@ impl ChessBoard {
                     let square: Square = Square::from_coords(row, col);
 
                     self.board[usize::from(square)] = Some(piece);
-                    self.bitboards[piece.to_index()] |= Bitboard::new(square.to_bitboard_mask());
-                    self.side_bitboards[color as usize] |= Bitboard::new(square.to_bitboard_mask());
+                    self.bitboards[piece.to_index()] |= Bitboard::from(square);
+                    self.side_bitboards[color as usize] |= Bitboard::from(square);
 
                     col += 1;
                 }
@@ -427,7 +427,7 @@ impl ChessBoard {
             if pinned_squares.count_squares() == 1 {
                 let pinned_sq: Square = pinned_squares.first_square_unchecked();
 
-                legal_squares[usize::from(pinned_sq)] = squares_between | Bitboard::new(pinner.to_bitboard_mask());
+                legal_squares[usize::from(pinned_sq)] = squares_between | Bitboard::from(pinner);
             }
         }
 
@@ -443,7 +443,7 @@ impl ChessBoard {
             if pinned_squares.count_squares() == 1 {
                 let pinned_sq: Square = pinned_squares.first_square_unchecked();
 
-                legal_squares[usize::from(pinned_sq)] = squares_between | Bitboard::new(pinner.to_bitboard_mask());
+                legal_squares[usize::from(pinned_sq)] = squares_between | Bitboard::from(pinner);
             }
         }
 
@@ -537,8 +537,7 @@ impl ChessBoard {
             1 => {
                 let checker = checkers.first_square_unchecked();
 
-                SQUARES_BETWEEN[usize::from(checker)][usize::from(king_square)]
-                    | Bitboard::new(checker.to_bitboard_mask())
+                SQUARES_BETWEEN[usize::from(checker)][usize::from(king_square)] | Bitboard::from(checker)
             }
             _ => {
                 self.generate_king_moves(color, danger_squares, move_buffer);
