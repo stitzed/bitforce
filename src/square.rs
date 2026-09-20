@@ -61,16 +61,18 @@ impl Square {
 impl Add<u8> for Square {
     type Output = Self;
 
+    #[allow(clippy::suspicious_arithmetic_impl)]
     fn add(self, rhs: u8) -> Self::Output {
-        Self(self.0.wrapping_add(rhs))
+        Self(self.0.wrapping_add(rhs) & 63)
     }
 }
 
 impl Sub<u8> for Square {
     type Output = Self;
 
+    #[allow(clippy::suspicious_arithmetic_impl)]
     fn sub(self, rhs: u8) -> Self::Output {
-        Self(self.0.wrapping_sub(rhs))
+        Self(self.0.wrapping_sub(rhs) & 63)
     }
 }
 
