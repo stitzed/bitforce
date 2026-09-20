@@ -262,7 +262,7 @@ impl ChessBoard {
                         return Err(FenParseError::RowOverflow(col));
                     }
 
-                    let square: Square = Square::from_coords(row, col);
+                    let square: Square = unsafe { Square::from_coords_unchecked(row, col) };
 
                     self.board[usize::from(square)] = Some(piece);
                     self.bitboards[piece.to_index()] |= Bitboard::from(square);

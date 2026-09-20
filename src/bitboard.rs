@@ -27,8 +27,8 @@ const fn generate_masks(offsets: &[(i8, i8)]) -> [Bitboard; 64] {
             let piece_offset: (i8, i8) = offsets[arr_ptr];
             let (delta_row, delta_col) = (row as i8 + piece_offset.0, col as i8 + piece_offset.1);
 
-            if (delta_row >= 0 && delta_row < 8) && (delta_col >= 0 && delta_col < 8) {
-                mask |= Square::from_coords(delta_row as u8, delta_col as u8).bitboard_mask()
+            if let Some(square) = Square::from_coords(delta_row as u8, delta_col as u8) {
+                mask |= square.bitboard_mask()
             }
 
             arr_ptr += 1;
@@ -56,8 +56,8 @@ const fn generate_lines_masks(positive_offset: (i8, i8), negative_offset: (i8, i
         let mut pos_delta_row: i8 = row as i8 + positive_offset.0;
         let mut pos_delta_col: i8 = col as i8 + positive_offset.1;
 
-        while (pos_delta_row >= 0 && pos_delta_row < 8) && (pos_delta_col >= 0 && pos_delta_col < 8) {
-            mask |= Square::from_coords(pos_delta_row as u8, pos_delta_col as u8).bitboard_mask();
+        while let Some(square) = Square::from_coords(pos_delta_row as u8, pos_delta_col as u8) {
+            mask |= square.bitboard_mask();
 
             pos_delta_row += positive_offset.0;
             pos_delta_col += positive_offset.1;
@@ -66,8 +66,8 @@ const fn generate_lines_masks(positive_offset: (i8, i8), negative_offset: (i8, i
         let mut neg_delta_row: i8 = row as i8 + negative_offset.0;
         let mut neg_delta_col: i8 = col as i8 + negative_offset.1;
 
-        while (neg_delta_row >= 0 && neg_delta_row < 8) && (neg_delta_col >= 0 && neg_delta_col < 8) {
-            mask |= Square::from_coords(neg_delta_row as u8, neg_delta_col as u8).bitboard_mask();
+        while let Some(square) = Square::from_coords(neg_delta_row as u8, neg_delta_col as u8) {
+            mask |= square.bitboard_mask();
 
             neg_delta_row += negative_offset.0;
             neg_delta_col += negative_offset.1;

@@ -27,9 +27,18 @@ impl Square {
     }
 
     #[inline(always)]
-    pub const fn from_coords(row: u8, col: u8) -> Self {
-        assert!(row < 8 && col < 8, "coords must be in 0..8 range");
+    pub const fn from_coords(row: u8, col: u8) -> Option<Self> {
+        if row >= 8 || col >= 8 {
+            None
+        } else {
+            Some(Self((row * 8) + col))
+        }
+    }
 
+    /// # Safety
+    /// `row` and `col` must be in 0..8 range
+    #[inline(always)]
+    pub const unsafe fn from_coords_unchecked(row: u8, col: u8) -> Self {
         Self((row * 8) + col)
     }
 
@@ -99,7 +108,7 @@ impl FromStr for Square {
 
         let row_index: u8 = (row as u8) - b'1';
 
-        Ok(Square::from_coords(row_index, col_index))
+        Ok(unsafe { Square::from_coords_unchecked(row_index, col_index) })
     }
 }
 
