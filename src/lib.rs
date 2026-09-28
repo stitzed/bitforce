@@ -7,4 +7,5 @@ pub mod eval;
 pub mod perft;
 pub mod piece;
 pub mod piece_move;
+pub mod search;
 pub mod square;
