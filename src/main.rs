@@ -1,3 +1,7 @@
+use std::io;
+
+mod uci;
+
 fn main() {
-    println!("Hello, world!");
+    uci::UciProtocol::new(io::stdout()).run();
 }
