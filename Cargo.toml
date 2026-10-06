@@ -2,6 +2,7 @@
 name = "bitforce"
 version = "0.1.0"
 edition = "2024"
+license = "MIT OR Apache-2.0"
 
 [dependencies]
 derive_more = { version = "2.1.1", features = ["into"] }
