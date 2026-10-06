@@ -9,6 +9,8 @@ use bitforce::search::Search;
 use bitforce::square::Square;
 use primitive_buffer::Buffer;
 
+const ENGINE_NAME: &str = concat!(env!("CARGO_PKG_NAME"), " v", env!("CARGO_PKG_VERSION"));
+
 pub enum UciCommand<'a> {
     Uci,
     IsReady,
@@ -100,7 +102,7 @@ impl<W: Write> UciProtocol<W> {
     pub fn handle(&mut self, cmd: UciCommand) {
         match cmd {
             UciCommand::Uci => {
-                self.send("id name BitForce");
+                self.send(&format!("id name {}", ENGINE_NAME));
                 self.send("id author stitzed");
                 self.send("uciok")
             }
