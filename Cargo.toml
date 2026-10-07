@@ -3,6 +3,7 @@ name = "bitforce"
 version = "0.1.0"
 edition = "2024"
 license = "MIT OR Apache-2.0"
+repository = "https://github.com/stitzed/bitforce"
 
 [dependencies]
 derive_more = { version = "2.1.1", features = ["into"] }
@@ -14,6 +15,11 @@ criterion = "0.8.2"
 
 [profile.test]
 inherits = "release"
+
+# The profile that 'dist' will build with
+[profile.dist]
+inherits = "release"
+lto = "thin"
 
 [[bench]]
 name = "nps"
