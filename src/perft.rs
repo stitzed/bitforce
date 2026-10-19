@@ -4,7 +4,7 @@ use crate::board::ChessBoard;
 use crate::board::movegen::MOVE_BUFFER_LEN;
 use crate::piece_move::Move;
 
-pub fn perft(board: &mut ChessBoard, depth: usize) -> u64 {
+pub fn perft(board: &mut ChessBoard, depth: u8) -> u64 {
     if depth == 0 {
         return 1;
     }
