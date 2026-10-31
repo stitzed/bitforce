@@ -1,8 +1,10 @@
 use std::io::{self, Write};
 use std::num::NonZeroU8;
 use std::str::FromStr;
+use std::time::{Duration, Instant};
 
 use bitforce::board::ChessBoard;
+use bitforce::perft::perft_divide;
 use bitforce::piece::Kind;
 use bitforce::piece_move::Move;
 use bitforce::search::Search;
@@ -15,8 +17,17 @@ pub enum UciCommand<'a> {
     Uci,
     IsReady,
     Position { fen: Option<&'a str>, moves: &'a str },
-    Go { depth: Option<NonZeroU8> },
+    Go(GoCommand),
     Quit,
+}
+
+pub enum GoCommand {
+    Perft(Option<NonZeroU8>),
+    Search(GoParams),
+}
+
+pub struct GoParams {
+    depth: Option<NonZeroU8>,
 }
 
 impl<'a> UciCommand<'a> {
@@ -42,15 +53,17 @@ impl<'a> UciCommand<'a> {
 
                 Some(Self::Position { fen, moves })
             }
-            "go" => {
-                let depth: Option<NonZeroU8> = if args.next() == Some("depth") {
-                    args.next().and_then(|d| NonZeroU8::from_str(d).ok())
-                } else {
-                    None
-                };
-
-                Some(Self::Go { depth })
-            }
+            "go" => match args.next() {
+                Some("depth") => {
+                    let depth: Option<NonZeroU8> = args.next().and_then(|d| NonZeroU8::from_str(d).ok());
+                    Some(Self::Go(GoCommand::Search(GoParams { depth })))
+                }
+                Some("perft") => {
+                    let depth: Option<NonZeroU8> = args.next().and_then(|d| NonZeroU8::from_str(d).ok());
+                    Some(Self::Go(GoCommand::Perft(depth)))
+                }
+                _ => None,
+            },
             "quit" => Some(Self::Quit),
             _ => None,
         };
@@ -112,15 +125,31 @@ impl<W: Write> UciProtocol<W> {
                     self.board = b
                 }
             }
-            UciCommand::Go { depth } => {
-                let search: Search = Search::new(depth.map(|d| d.get()).unwrap_or(6));
-                let best_move: Option<Move> = search.find_best_move(&mut self.board);
+            UciCommand::Go(command) => match command {
+                GoCommand::Perft(depth) => {
+                    let start: Instant = Instant::now();
+                    let d: u8 = depth.map(|d| d.get()).unwrap_or(6);
+                    let total_nodes: u64 = perft_divide(&mut self.board, d, |mv, n| println!("{mv}: {n}"));
+                    let elapsed: Duration = start.elapsed();
 
-                match best_move {
-                    Some(mv) => self.send(&format!("bestmove {mv}")),
-                    None => self.send("bestmove 0000"),
+                    println!();
+                    println!("Nodes searched: {total_nodes}");
+
+                    let ms: u64 = elapsed.as_millis() as u64;
+                    let nps: u64 = (total_nodes as f64 / elapsed.as_secs_f64()) as u64;
+
+                    println!("info string time {ms} nps {nps}")
                 }
-            }
+                GoCommand::Search(params) => {
+                    let search: Search = Search::new(params.depth.map(|d| d.get()).unwrap_or(6));
+                    let best_move: Option<Move> = search.find_best_move(&mut self.board);
+
+                    match best_move {
+                        Some(mv) => self.send(&format!("bestmove {mv}")),
+                        None => self.send("bestmove 0000"),
+                    }
+                }
+            },
             UciCommand::Quit => {}
         }
     }
