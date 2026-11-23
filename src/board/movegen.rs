@@ -11,6 +11,36 @@ pub const MOVE_BUFFER_LEN: usize = 256;
 
 type MoveBuffer<'a> = &'a mut Buffer<Move, MOVE_BUFFER_LEN>;
 
+#[inline(always)]
+fn push_pawn_moves<const PROMOTION: bool, D: PawnDirections>(
+    move_buffer: MoveBuffer<'_>,
+    target: Bitboard,
+    offset: u8,
+    is_capture: bool,
+    is_legal: impl Fn(Square, Square) -> bool,
+) {
+    for sq in target {
+        let from_square: Square = D::offset_square(sq, offset);
+
+        if !is_legal(from_square, sq) {
+            continue;
+        }
+
+        if PROMOTION {
+            for promotion_type in Kind::PROMOTION_KINDS {
+                move_buffer.push(
+                    MoveBuilder::new(from_square, sq)
+                        .capture(is_capture)
+                        .with_promotion(promotion_type)
+                        .build(),
+                )
+            }
+        } else {
+            move_buffer.push(MoveBuilder::new(from_square, sq).capture(is_capture).build())
+        }
+    }
+}
+
 mod attacks {
     use crate::bitboard::prelude::*;
     use crate::piece::Color;
@@ -316,97 +346,55 @@ impl ChessBoard {
         }
 
         // Quiet one push moves
-        for sq in legal_once_push & !D::PROMOTION_RANK {
-            let from_square: Square = D::offset_square(sq, 8);
-
-            if !is_legal(from_square, sq) {
-                continue;
-            };
-
-            move_buffer.push(MoveBuilder::new(from_square, sq).build());
-        }
-
-        // Quiet one push moves with promotion
-        for sq in legal_once_push & D::PROMOTION_RANK {
-            let from_square: Square = D::offset_square(sq, 8);
-
-            if !is_legal(from_square, sq) {
-                continue;
-            };
-
-            for promotion_type in Kind::PROMOTION_KINDS {
-                move_buffer.push(MoveBuilder::new(from_square, sq).with_promotion(promotion_type).build());
-            }
-        }
+        push_pawn_moves::<false, D>(
+            move_buffer,
+            legal_once_push & !D::PROMOTION_RANK,
+            D::ONCE_PUSH_OFFSET,
+            false,
+            is_legal,
+        );
+        push_pawn_moves::<true, D>(
+            move_buffer,
+            legal_once_push & D::PROMOTION_RANK,
+            D::ONCE_PUSH_OFFSET,
+            false,
+            is_legal,
+        );
 
         // Quiet double push moves
-        for sq in legal_double_push {
-            let from_square: Square = D::offset_square(sq, 16);
-
-            if !is_legal(from_square, sq) {
-                continue;
-            };
-
-            move_buffer.push(MoveBuilder::new(from_square, sq).build());
-        }
+        push_pawn_moves::<false, D>(move_buffer, legal_double_push, D::DOUBLE_PUSH_OFFSET, false, is_legal);
 
         // Left capture moves
-        for sq in left_attacks & !D::PROMOTION_RANK {
-            let from_square: Square = D::offset_square(sq, D::LEFT_ATTACKS_OFFSET);
-
-            if !is_legal(from_square, sq) {
-                continue;
-            };
-
-            move_buffer.push(MoveBuilder::new(from_square, sq).with_capture().build());
-        }
-
-        // Left capture moves with promotion
-        for sq in left_attacks & D::PROMOTION_RANK {
-            let from_square: Square = D::offset_square(sq, D::LEFT_ATTACKS_OFFSET);
-
-            if !is_legal(from_square, sq) {
-                continue;
-            };
-
-            for promotion_type in Kind::PROMOTION_KINDS {
-                move_buffer.push(
-                    MoveBuilder::new(from_square, sq)
-                        .with_capture()
-                        .with_promotion(promotion_type)
-                        .build(),
-                );
-            }
-        }
+        push_pawn_moves::<false, D>(
+            move_buffer,
+            left_attacks & !D::PROMOTION_RANK,
+            D::LEFT_ATTACKS_OFFSET,
+            true,
+            is_legal,
+        );
+        push_pawn_moves::<true, D>(
+            move_buffer,
+            left_attacks & D::PROMOTION_RANK,
+            D::LEFT_ATTACKS_OFFSET,
+            true,
+            is_legal,
+        );
 
         // Right capture moves
-        for sq in right_attacks & !D::PROMOTION_RANK {
-            let from_square: Square = D::offset_square(sq, D::RIGHT_ATTACKS_OFFSET);
-
-            if !is_legal(from_square, sq) {
-                continue;
-            };
-
-            move_buffer.push(MoveBuilder::new(from_square, sq).with_capture().build());
-        }
-
-        // Right capture moves with promotion
-        for sq in right_attacks & D::PROMOTION_RANK {
-            let from_square: Square = D::offset_square(sq, D::RIGHT_ATTACKS_OFFSET);
-
-            if !is_legal(from_square, sq) {
-                continue;
-            };
-
-            for promotion_type in Kind::PROMOTION_KINDS {
-                move_buffer.push(
-                    MoveBuilder::new(from_square, sq)
-                        .with_capture()
-                        .with_promotion(promotion_type)
-                        .build(),
-                );
-            }
-        }
+        push_pawn_moves::<false, D>(
+            move_buffer,
+            right_attacks & !D::PROMOTION_RANK,
+            D::RIGHT_ATTACKS_OFFSET,
+            true,
+            is_legal,
+        );
+        push_pawn_moves::<true, D>(
+            move_buffer,
+            right_attacks & D::PROMOTION_RANK,
+            D::RIGHT_ATTACKS_OFFSET,
+            true,
+            is_legal,
+        );
     }
 
     fn generate_moves_for_kind<F>(
