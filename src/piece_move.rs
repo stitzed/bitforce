@@ -120,6 +120,12 @@ impl MoveBuilder {
     }
 
     #[inline(always)]
+    pub fn capture(mut self, is_capture: bool) -> Self {
+        self.0 |= (is_capture as u32) << 15;
+        self
+    }
+
+    #[inline(always)]
     pub fn with_en_passant(mut self) -> Self {
         self.0 |= 1 << 16;
         self
