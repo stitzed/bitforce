@@ -32,32 +32,32 @@ impl Move {
     }
 
     #[inline(always)]
-    pub fn from_square(&self) -> Square {
+    pub fn from_square(self) -> Square {
         unsafe { Square::new_unchecked(((self.0 >> 6) & Square::SQUARE_MASK as u32) as u8) }
     }
 
     #[inline(always)]
-    pub fn to_square(&self) -> Square {
+    pub fn to_square(self) -> Square {
         unsafe { Square::new_unchecked((self.0 & Square::SQUARE_MASK as u32) as u8) }
     }
 
     #[inline(always)]
-    pub fn promotion_type(&self) -> Option<Kind> {
+    pub fn promotion_type(self) -> Option<Kind> {
         Kind::from_index(((self.0 >> 12) & Kind::KIND_MASK as u32) as u8)
     }
 
     #[inline(always)]
-    pub fn is_capture(&self) -> bool {
+    pub fn is_capture(self) -> bool {
         ((self.0 >> 15) & 1) == 1
     }
 
     #[inline(always)]
-    pub fn is_en_passant(&self) -> bool {
+    pub fn is_en_passant(self) -> bool {
         ((self.0 >> 16) & 1) == 1
     }
 
     #[inline(always)]
-    pub fn castling_type(&self) -> Option<CastlingType> {
+    pub fn castling_type(self) -> Option<CastlingType> {
         CastlingType::from_index((self.0 >> 17) as u8)
     }
 }

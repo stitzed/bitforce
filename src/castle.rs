@@ -45,22 +45,22 @@ impl CastlingType {
     }
 
     #[inline(always)]
-    pub fn path_mask(&self) -> Bitboard {
-        Self::PATH_MASKS[*self as usize - 1]
+    pub fn path_mask(self) -> Bitboard {
+        Self::PATH_MASKS[self as usize - 1]
     }
 
     #[inline(always)]
-    pub fn xor_mask(&self) -> CastlingXorMasks {
-        Self::XOR_MASKS[*self as usize - 1]
+    pub fn xor_mask(self) -> CastlingXorMasks {
+        Self::XOR_MASKS[self as usize - 1]
     }
 
     #[inline(always)]
-    pub fn passed_square(&self) -> Square {
-        Self::PASSED_SQUARES[*self as usize - 1]
+    pub fn passed_square(self) -> Square {
+        Self::PASSED_SQUARES[self as usize - 1]
     }
 
     #[inline(always)]
-    pub fn rook_start_square(&self) -> Square {
+    pub fn rook_start_square(self) -> Square {
         (Bitboard::from(self.passed_square()) ^ self.xor_mask().rook_mask).first_square_unchecked()
     }
 }
@@ -111,7 +111,7 @@ impl CastlingFlags {
     }
 
     #[inline(always)]
-    pub fn can_castle(&self, color: Color, castling_type: CastlingType) -> bool {
+    pub fn can_castle(self, color: Color, castling_type: CastlingType) -> bool {
         (self.0 & Self::castle_to_mask(color, castling_type)) != 0
     }
 }

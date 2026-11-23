@@ -16,17 +16,17 @@ impl Piece {
     }
 
     #[inline(always)]
-    pub fn color(&self) -> Color {
+    pub fn color(self) -> Color {
         Color::ALL_COLORS[((self.0 >> 3) & 1) as usize]
     }
 
     #[inline(always)]
-    pub fn kind(&self) -> Kind {
+    pub fn kind(self) -> Kind {
         unsafe { *Kind::ALL_KINDS.get_unchecked((self.0 & Kind::KIND_MASK) as usize) }
     }
 
     #[inline(always)]
-    pub fn to_index(&self) -> usize {
+    pub fn to_index(self) -> usize {
         (self.color() as usize * 6) + (self.kind() as usize)
     }
 }
@@ -75,13 +75,13 @@ impl Kind {
     }
 
     #[inline(always)]
-    pub fn start_row_mask(&self) -> u64 {
-        Self::START_ROW_MASKS[*self as usize]
+    pub fn start_row_mask(self) -> u64 {
+        Self::START_ROW_MASKS[self as usize]
     }
 
     #[inline(always)]
-    pub fn value(&self) -> i32 {
-        Self::KIND_VALUES[*self as usize]
+    pub fn value(self) -> i32 {
+        Self::KIND_VALUES[self as usize]
     }
 }
 

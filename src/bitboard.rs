@@ -231,27 +231,27 @@ impl Bitboard {
     }
 
     #[inline(always)]
-    pub fn contains(&self, square: Square) -> bool {
+    pub fn contains(self, square: Square) -> bool {
         self.0 & (square.bitboard_mask()) != 0
     }
 
     #[inline(always)]
-    pub fn is_empty(&self) -> bool {
+    pub fn is_empty(self) -> bool {
         self.0 == 0
     }
 
     #[inline(always)]
-    pub fn first_square_unchecked(&self) -> Square {
+    pub fn first_square_unchecked(self) -> Square {
         unsafe { Square::new_unchecked(self.0.trailing_zeros() as u8) }
     }
 
     #[inline(always)]
-    pub fn count_squares(&self) -> u32 {
+    pub fn count_squares(self) -> u32 {
         self.0.count_ones()
     }
 
     #[inline(always)]
-    pub fn swap_ranks(&self) -> Bitboard {
+    pub fn swap_ranks(self) -> Bitboard {
         Self(self.0.swap_bytes())
     }
 }
