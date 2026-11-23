@@ -119,7 +119,7 @@ pub trait PawnDirections {
     const RIGHT_ATTACKS_OFFSET: u8;
 
     fn shift_bitboard(bitboard: Bitboard, value: u8) -> Bitboard;
-    fn offest_square(square: Square, offset: u8) -> Square;
+    fn offset_square(square: Square, offset: u8) -> Square;
 }
 
 pub struct WhitePawnDirections;
@@ -137,7 +137,7 @@ impl PawnDirections for WhitePawnDirections {
     }
 
     #[inline(always)]
-    fn offest_square(square: Square, offset: u8) -> Square {
+    fn offset_square(square: Square, offset: u8) -> Square {
         square - offset
     }
 }
@@ -156,7 +156,7 @@ impl PawnDirections for BlackPawnDirections {
     }
 
     #[inline(always)]
-    fn offest_square(square: Square, offset: u8) -> Square {
+    fn offset_square(square: Square, offset: u8) -> Square {
         square + offset
     }
 }

@@ -278,7 +278,7 @@ impl ChessBoard {
         // En passant moves
         if let Some(ep_sq) = self.en_passant_square {
             let king_square: Square = self.bitboard(Piece::new(D::COLOR, Kind::King)).first_square_unchecked();
-            let opposite_pawn: Square = D::offest_square(ep_sq, 8);
+            let opposite_pawn: Square = D::offset_square(ep_sq, 8);
 
             let mut ep_rank: Bitboard = self.all_pieces_bitboard & Bitboard::new(0xFF << (opposite_pawn.row() * 8));
             ep_rank.clear_square(opposite_pawn);
@@ -317,7 +317,7 @@ impl ChessBoard {
 
         // Quiet one push moves
         for sq in legal_once_push & !D::PROMOTION_RANK {
-            let from_square: Square = D::offest_square(sq, 8);
+            let from_square: Square = D::offset_square(sq, 8);
 
             if !is_legal(from_square, sq) {
                 continue;
@@ -328,7 +328,7 @@ impl ChessBoard {
 
         // Quiet one push moves with promotion
         for sq in legal_once_push & D::PROMOTION_RANK {
-            let from_square: Square = D::offest_square(sq, 8);
+            let from_square: Square = D::offset_square(sq, 8);
 
             if !is_legal(from_square, sq) {
                 continue;
@@ -341,7 +341,7 @@ impl ChessBoard {
 
         // Quiet double push moves
         for sq in legal_double_push {
-            let from_square: Square = D::offest_square(sq, 16);
+            let from_square: Square = D::offset_square(sq, 16);
 
             if !is_legal(from_square, sq) {
                 continue;
@@ -352,7 +352,7 @@ impl ChessBoard {
 
         // Left capture moves
         for sq in left_attacks & !D::PROMOTION_RANK {
-            let from_square: Square = D::offest_square(sq, D::LEFT_ATTACKS_OFFSET);
+            let from_square: Square = D::offset_square(sq, D::LEFT_ATTACKS_OFFSET);
 
             if !is_legal(from_square, sq) {
                 continue;
@@ -363,7 +363,7 @@ impl ChessBoard {
 
         // Left capture moves with promotion
         for sq in left_attacks & D::PROMOTION_RANK {
-            let from_square: Square = D::offest_square(sq, D::LEFT_ATTACKS_OFFSET);
+            let from_square: Square = D::offset_square(sq, D::LEFT_ATTACKS_OFFSET);
 
             if !is_legal(from_square, sq) {
                 continue;
@@ -381,7 +381,7 @@ impl ChessBoard {
 
         // Right capture moves
         for sq in right_attacks & !D::PROMOTION_RANK {
-            let from_square: Square = D::offest_square(sq, D::RIGHT_ATTACKS_OFFSET);
+            let from_square: Square = D::offset_square(sq, D::RIGHT_ATTACKS_OFFSET);
 
             if !is_legal(from_square, sq) {
                 continue;
@@ -392,7 +392,7 @@ impl ChessBoard {
 
         // Right capture moves with promotion
         for sq in right_attacks & D::PROMOTION_RANK {
-            let from_square: Square = D::offest_square(sq, D::RIGHT_ATTACKS_OFFSET);
+            let from_square: Square = D::offset_square(sq, D::RIGHT_ATTACKS_OFFSET);
 
             if !is_legal(from_square, sq) {
                 continue;
