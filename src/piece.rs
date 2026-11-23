@@ -113,6 +113,8 @@ impl Not for Color {
 
 pub trait PawnDirections {
     const COLOR: Color;
+    const ONCE_PUSH_OFFSET: u8 = 8;
+    const DOUBLE_PUSH_OFFSET: u8 = 16;
     const ONCE_PUSH_RANK: Bitboard;
     const PROMOTION_RANK: Bitboard;
     const LEFT_ATTACKS_OFFSET: u8;
