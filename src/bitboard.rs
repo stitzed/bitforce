@@ -231,6 +231,11 @@ impl Bitboard {
     }
 
     #[inline(always)]
+    pub fn without_square(self, square: Square) -> Self {
+        Self(self.0 & !square.bitboard_mask())
+    }
+
+    #[inline(always)]
     pub fn contains(self, square: Square) -> bool {
         self.0 & (square.bitboard_mask()) != 0
     }
@@ -253,6 +258,11 @@ impl Bitboard {
     #[inline(always)]
     pub fn swap_ranks(self) -> Bitboard {
         Self(self.0.swap_bytes())
+    }
+
+    #[inline(always)]
+    pub fn from_rank(rank: u8) -> Bitboard {
+        Self(0xFF << (rank * 8))
     }
 }
 
