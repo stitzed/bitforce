@@ -285,12 +285,17 @@ impl ChessBoard {
     fn generate_en_passant_moves<D: PawnDirections>(
         &self,
         pawn_bitboard: Bitboard,
+        checker_ray: Bitboard,
         is_legal: impl Fn(Square, Square) -> bool,
         move_buffer: MoveBuffer<'_>,
     ) {
         let Some(ep_sq) = self.en_passant_square else { return };
         let king_square: Square = self.bitboard(Piece::new(D::COLOR, Kind::King)).first_square_unchecked();
         let opposite_pawn_square: Square = D::offset_square(ep_sq, D::ONCE_PUSH_OFFSET);
+
+        if !checker_ray.contains(ep_sq) && !checker_ray.contains(opposite_pawn_square) {
+            return;
+        }
 
         let ep_rank: Bitboard = (self.all_pieces_bitboard & Bitboard::from_rank(opposite_pawn_square.row()))
             .without_square(opposite_pawn_square);
@@ -349,7 +354,7 @@ impl ChessBoard {
 
         let is_legal = |from_sq, to_sq| pinned_rays[usize::from(from_sq)].contains(to_sq);
 
-        self.generate_en_passant_moves::<D>(pawn_bitboard, is_legal, move_buffer);
+        self.generate_en_passant_moves::<D>(pawn_bitboard, checker_ray, is_legal, move_buffer);
 
         // Quiet one push moves
         push_pawn_moves::<false, D>(
