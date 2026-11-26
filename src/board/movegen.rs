@@ -282,6 +282,50 @@ impl ChessBoard {
         }
     }
 
+    fn generate_en_passant_moves<D: PawnDirections>(
+        &self,
+        pawn_bitboard: Bitboard,
+        is_legal: impl Fn(Square, Square) -> bool,
+        move_buffer: MoveBuffer<'_>,
+    ) {
+        let Some(ep_sq) = self.en_passant_square else { return };
+        let king_square: Square = self.bitboard(Piece::new(D::COLOR, Kind::King)).first_square_unchecked();
+        let opposite_pawn_square: Square = D::offset_square(ep_sq, D::ONCE_PUSH_OFFSET);
+
+        let ep_rank: Bitboard = (self.all_pieces_bitboard & Bitboard::from_rank(opposite_pawn_square.row()))
+            .without_square(opposite_pawn_square);
+
+        let pawn_attackers_mask: Bitboard =
+            unsafe { *PAWN_ATTACKERS_MASKS[D::COLOR as usize].get_unchecked(usize::from(ep_sq)) };
+
+        let attackers: Bitboard = pawn_bitboard & pawn_attackers_mask;
+
+        let enemy_orthogonal: Bitboard =
+            self.bitboard(Piece::new(!D::COLOR, Kind::Rook)) | self.bitboard(Piece::new(!D::COLOR, Kind::Queen));
+
+        for attacker in attackers {
+            if !is_legal(attacker, ep_sq) {
+                continue;
+            }
+
+            let ep_move: Move = MoveBuilder::new(attacker, ep_sq)
+                .with_capture()
+                .with_en_passant()
+                .build();
+
+            if king_square.row() != opposite_pawn_square.row() {
+                move_buffer.push(ep_move);
+                continue;
+            }
+
+            let simulated_rank: Bitboard = ep_rank.without_square(attacker);
+
+            if (attacks::get_rank_attacks(king_square, simulated_rank) & enemy_orthogonal).is_empty() {
+                move_buffer.push(ep_move);
+            }
+        }
+    }
+
     fn generate_pawn_moves_for_color<D: PawnDirections>(
         &self,
         pinned_rays: &[Bitboard; 64],
@@ -305,45 +349,7 @@ impl ChessBoard {
 
         let is_legal = |from_sq, to_sq| pinned_rays[usize::from(from_sq)].contains(to_sq);
 
-        // En passant moves
-        if let Some(ep_sq) = self.en_passant_square {
-            let king_square: Square = self.bitboard(Piece::new(D::COLOR, Kind::King)).first_square_unchecked();
-            let opposite_pawn: Square = D::offset_square(ep_sq, 8);
-
-            let mut ep_rank: Bitboard = self.all_pieces_bitboard & Bitboard::new(0xFF << (opposite_pawn.row() * 8));
-            ep_rank.clear_square(opposite_pawn);
-
-            let pawn_attackers_mask: Bitboard =
-                unsafe { *PAWN_ATTACKERS_MASKS[D::COLOR as usize].get_unchecked(usize::from(ep_sq)) };
-
-            let attackers: Bitboard = pawn_bitboard & pawn_attackers_mask;
-
-            for attacker in attackers {
-                let ep_move: Move = MoveBuilder::new(attacker, ep_sq)
-                    .with_capture()
-                    .with_en_passant()
-                    .build();
-
-                if !is_legal(attacker, ep_sq) {
-                    continue;
-                }
-
-                if king_square.row() != opposite_pawn.row() {
-                    move_buffer.push(ep_move);
-                    continue;
-                }
-
-                let mut simulated_rank: Bitboard = ep_rank;
-                simulated_rank.clear_square(attacker);
-
-                let enemy_orthogonal: Bitboard = self.bitboard(Piece::new(!D::COLOR, Kind::Rook))
-                    | self.bitboard(Piece::new(!D::COLOR, Kind::Queen));
-
-                if (attacks::get_rank_attacks(king_square, simulated_rank) & enemy_orthogonal).is_empty() {
-                    move_buffer.push(ep_move);
-                }
-            }
-        }
+        self.generate_en_passant_moves::<D>(pawn_bitboard, is_legal, move_buffer);
 
         // Quiet one push moves
         push_pawn_moves::<false, D>(
