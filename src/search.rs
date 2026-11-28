@@ -22,14 +22,20 @@ impl Search {
         let mut best_score: i32 = i32::MIN;
         let mut best_move: Option<Move> = None;
 
+        let mut alpha: i32 = -INFINITY;
+
         for mv in moves {
             board.make_move_unchecked(*mv);
-            let score: i32 = -self.alpha_beta(board, self.start_depth - 1, -INFINITY, INFINITY);
+            let score = -self.alpha_beta(board, self.start_depth - 1, -INFINITY, -alpha);
             board.unmake_move();
 
             if score > best_score {
                 best_score = score;
-                best_move = Some(*mv)
+                best_move = Some(*mv);
+            }
+
+            if score > alpha {
+                alpha = score;
             }
         }
 
