@@ -184,7 +184,7 @@ impl<W: Write> UciProtocol<W> {
             });
 
             match legal_move {
-                Some(&mv) => board.make_move_unchecked(mv),
+                Some(&mv) => board.make_move(mv),
                 None => return None,
             }
         }

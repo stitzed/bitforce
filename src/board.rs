@@ -345,7 +345,7 @@ impl ChessBoard {
         *self.get_piece_at_mut(square) = None;
     }
 
-    pub fn make_move_unchecked(&mut self, piece_move: Move) {
+    pub fn make_move(&mut self, piece_move: Move) {
         let from_square: Square = piece_move.from_square();
         let to_square: Square = piece_move.to_square();
 
@@ -367,9 +367,10 @@ impl ChessBoard {
             let (square, kind) = if piece_move.is_en_passant() {
                 (en_passant_square, Kind::Pawn)
             } else {
-                // SAFETY: `is_capture()` guarantees a piece exists at `to_square`
-                // based on bitboard validation.
-                let kind: Kind = unsafe { self.get_piece_at(to_square).unwrap_unchecked().kind() };
+                let kind: Kind = self
+                    .get_piece_at(to_square)
+                    .expect("to_square should be non-empty")
+                    .kind();
                 (to_square, kind)
             };
 

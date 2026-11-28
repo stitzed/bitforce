@@ -25,7 +25,7 @@ impl Search {
         let mut alpha: i32 = -INFINITY;
 
         for mv in moves {
-            board.make_move_unchecked(*mv);
+            board.make_move(*mv);
             let score = -self.alpha_beta(board, self.start_depth - 1, -INFINITY, -alpha);
             board.unmake_move();
 
@@ -61,7 +61,7 @@ impl Search {
         let mut best_score: i32 = i32::MIN;
 
         for mv in moves {
-            board.make_move_unchecked(*mv);
+            board.make_move(*mv);
             let score: i32 = -self.alpha_beta(board, depth - 1, -beta, -alpha);
             board.unmake_move();
 

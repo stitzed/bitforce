@@ -18,7 +18,7 @@ pub fn perft(board: &mut ChessBoard, depth: u8) -> u64 {
     }
 
     for &mv in moves {
-        board.make_move_unchecked(mv);
+        board.make_move(mv);
         nodes += perft(board, depth - 1);
         board.unmake_move();
     }
@@ -35,7 +35,7 @@ pub fn perft_divide<F: FnMut(Move, u64)>(board: &mut ChessBoard, depth: u8, mut 
     let moves: &[Move] = board.generate_legal_moves(board.current_turn(), &mut buf);
 
     for &mv in moves {
-        board.make_move_unchecked(mv);
+        board.make_move(mv);
         let nodes: u64 = perft(board, depth - 1);
         board.unmake_move();
 
